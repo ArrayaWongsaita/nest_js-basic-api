@@ -1,0 +1,6 @@
+export const TODO_REPOSITORY = Symbol('TODO_REPOSITORY');
+export const CREATE_TODO_USE_CASE = Symbol('CREATE_TODO_USE_CASE');
+export const LIST_USER_TODOS_USE_CASE = Symbol('LIST_USER_TODOS_USE_CASE');
+export const GET_TODO_USE_CASE = Symbol('GET_TODO_USE_CASE');
+export const UPDATE_TODO_USE_CASE = Symbol('UPDATE_TODO_USE_CASE');
+export const DELETE_TODO_USE_CASE = Symbol('DELETE_TODO_USE_CASE');

@@ -1,0 +1,6 @@
+export const BOOK_REPOSITORY = Symbol('BOOK_REPOSITORY');
+export const CREATE_BOOK_USE_CASE = Symbol('CREATE_BOOK_USE_CASE');
+export const LIST_USER_BOOKS_USE_CASE = Symbol('LIST_USER_BOOKS_USE_CASE');
+export const GET_BOOK_USE_CASE = Symbol('GET_BOOK_USE_CASE');
+export const UPDATE_BOOK_USE_CASE = Symbol('UPDATE_BOOK_USE_CASE');
+export const DELETE_BOOK_USE_CASE = Symbol('DELETE_BOOK_USE_CASE');

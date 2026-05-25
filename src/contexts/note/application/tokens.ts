@@ -1,0 +1,6 @@
+export const NOTE_REPOSITORY = Symbol('NOTE_REPOSITORY');
+export const CREATE_NOTE_USE_CASE = Symbol('CREATE_NOTE_USE_CASE');
+export const LIST_USER_NOTES_USE_CASE = Symbol('LIST_USER_NOTES_USE_CASE');
+export const GET_NOTE_USE_CASE = Symbol('GET_NOTE_USE_CASE');
+export const UPDATE_NOTE_USE_CASE = Symbol('UPDATE_NOTE_USE_CASE');
+export const DELETE_NOTE_USE_CASE = Symbol('DELETE_NOTE_USE_CASE');

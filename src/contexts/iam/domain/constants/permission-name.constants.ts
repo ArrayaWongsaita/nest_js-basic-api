@@ -1,0 +1,80 @@
+export const IAM_USERS_CREATE_PERMISSION = 'iam.users.create';
+export const IAM_USERS_READ_PERMISSION = 'iam.users.read';
+export const IAM_USERS_UPDATE_ROLES_PERMISSION = 'iam.users.update_roles';
+export const IAM_USERS_DEACTIVATE_PERMISSION = 'iam.users.deactivate';
+export const IAM_ROLES_READ_PERMISSION = 'iam.roles.read';
+export const IAM_ROLES_CREATE_PERMISSION = 'iam.roles.create';
+export const IAM_ROLES_UPDATE_PERMISSION = 'iam.roles.update';
+export const IAM_ROLES_DELETE_PERMISSION = 'iam.roles.delete';
+export const IAM_PERMISSIONS_READ_PERMISSION = 'iam.permissions.read';
+export const IAM_PERMISSIONS_CREATE_PERMISSION = 'iam.permissions.create';
+export const IAM_PERMISSIONS_UPDATE_PERMISSION = 'iam.permissions.update';
+export const IAM_PERMISSIONS_DELETE_PERMISSION = 'iam.permissions.delete';
+export const SYSTEM_RESET_ANY_PERMISSION = 'system.reset.any';
+export const TODO_CREATE_OWN_PERMISSION = 'todo.create_own';
+export const TODO_READ_OWN_PERMISSION = 'todo.read_own';
+export const TODO_UPDATE_OWN_PERMISSION = 'todo.update_own';
+export const TODO_DELETE_OWN_PERMISSION = 'todo.delete_own';
+export const NOTE_CREATE_OWN_PERMISSION = 'note.create_own';
+export const NOTE_READ_OWN_PERMISSION = 'note.read_own';
+export const NOTE_UPDATE_OWN_PERMISSION = 'note.update_own';
+export const NOTE_DELETE_OWN_PERMISSION = 'note.delete_own';
+export const CONTACT_CREATE_OWN_PERMISSION = 'contact.create_own';
+export const CONTACT_READ_OWN_PERMISSION = 'contact.read_own';
+export const CONTACT_UPDATE_OWN_PERMISSION = 'contact.update_own';
+export const CONTACT_DELETE_OWN_PERMISSION = 'contact.delete_own';
+export const BOOK_CREATE_OWN_PERMISSION = 'book.create_own';
+export const BOOK_READ_OWN_PERMISSION = 'book.read_own';
+export const BOOK_UPDATE_OWN_PERMISSION = 'book.update_own';
+export const BOOK_DELETE_OWN_PERMISSION = 'book.delete_own';
+export const MOVIE_CREATE_OWN_PERMISSION = 'movie.create_own';
+export const MOVIE_READ_OWN_PERMISSION = 'movie.read_own';
+export const MOVIE_UPDATE_OWN_PERMISSION = 'movie.update_own';
+export const MOVIE_DELETE_OWN_PERMISSION = 'movie.delete_own';
+export const EXPENSE_CREATE_OWN_PERMISSION = 'expense.create_own';
+export const EXPENSE_READ_OWN_PERMISSION = 'expense.read_own';
+export const EXPENSE_UPDATE_OWN_PERMISSION = 'expense.update_own';
+export const EXPENSE_DELETE_OWN_PERMISSION = 'expense.delete_own';
+
+export const DEFAULT_PERMISSION_NAMES = [
+  IAM_USERS_CREATE_PERMISSION,
+  IAM_USERS_READ_PERMISSION,
+  IAM_USERS_UPDATE_ROLES_PERMISSION,
+  IAM_USERS_DEACTIVATE_PERMISSION,
+  IAM_ROLES_READ_PERMISSION,
+  IAM_ROLES_CREATE_PERMISSION,
+  IAM_ROLES_UPDATE_PERMISSION,
+  IAM_ROLES_DELETE_PERMISSION,
+  IAM_PERMISSIONS_READ_PERMISSION,
+  IAM_PERMISSIONS_CREATE_PERMISSION,
+  IAM_PERMISSIONS_UPDATE_PERMISSION,
+  IAM_PERMISSIONS_DELETE_PERMISSION,
+  SYSTEM_RESET_ANY_PERMISSION,
+  TODO_CREATE_OWN_PERMISSION,
+  TODO_READ_OWN_PERMISSION,
+  TODO_UPDATE_OWN_PERMISSION,
+  TODO_DELETE_OWN_PERMISSION,
+  NOTE_CREATE_OWN_PERMISSION,
+  NOTE_READ_OWN_PERMISSION,
+  NOTE_UPDATE_OWN_PERMISSION,
+  NOTE_DELETE_OWN_PERMISSION,
+  CONTACT_CREATE_OWN_PERMISSION,
+  CONTACT_READ_OWN_PERMISSION,
+  CONTACT_UPDATE_OWN_PERMISSION,
+  CONTACT_DELETE_OWN_PERMISSION,
+  BOOK_CREATE_OWN_PERMISSION,
+  BOOK_READ_OWN_PERMISSION,
+  BOOK_UPDATE_OWN_PERMISSION,
+  BOOK_DELETE_OWN_PERMISSION,
+  MOVIE_CREATE_OWN_PERMISSION,
+  MOVIE_READ_OWN_PERMISSION,
+  MOVIE_UPDATE_OWN_PERMISSION,
+  MOVIE_DELETE_OWN_PERMISSION,
+  EXPENSE_CREATE_OWN_PERMISSION,
+  EXPENSE_READ_OWN_PERMISSION,
+  EXPENSE_UPDATE_OWN_PERMISSION,
+  EXPENSE_DELETE_OWN_PERMISSION,
+] as const;
+
+export type DefaultPermissionName =
+  (typeof DEFAULT_PERMISSION_NAMES)[number];
