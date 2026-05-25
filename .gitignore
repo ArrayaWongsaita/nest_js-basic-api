@@ -54,3 +54,17 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+
+# ai file
+skills-lock.json
+AGENTS.md
+CONTEXT.md
+# ai dir
+.agents
+.claude
+/generated/prisma
+docs
+
+#pnpm
+.pnpm-store
