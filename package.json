@@ -15,7 +15,6 @@
     "start:dev": "nest start --watch",
     "prestart:debug": "pnpm run prisma:generate",
     "start:debug": "nest start --debug --watch",
-    "prestart:prod": "pnpm run build",
     "start:prod": "node dist/src/main.js",
     "prisma:generate": "prisma generate",
     "prisma:db:push": "prisma db push",
