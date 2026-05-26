@@ -28,7 +28,10 @@ Optional values:
 CORS_ALLOWED_ORIGINS=http://localhost:3001
 BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 BOOTSTRAP_ADMIN_PASSWORD=change-me-admin-password
+DATABASE_CA_BASE64=LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tLi4u
 ```
+
+Use `DATABASE_CA_BASE64` when your Postgres server is signed by a custom or managed CA. The value must be the PEM certificate content encoded as base64. When present, the app enables verified TLS with that CA and does not rely on legacy `sslmode=verify-ca` URL semantics.
 
 ## HTTP Response Contract
 
@@ -93,10 +96,10 @@ Access tokens are returned in JSON and must be sent as `Bearer` tokens on protec
 Seed the initial roles, permissions, and admin user with:
 
 ```bash
-npm run bootstrap:auth-admin
+pnpm run bootstrap:auth-admin
 ```
 
-This command regenerates the Prisma client before bootstrapping so the runtime client stays aligned with the current Prisma schema.
+This command regenerates the local Prisma client in `generated/prisma` before bootstrapping so the runtime client stays aligned with the current Prisma schema.
 
 If bootstrap fails with a missing column or other schema-drift error, sync the database first:
 
@@ -148,10 +151,25 @@ pnpm run prisma:db:push
 For CLI-based maintenance, the same demo-user seed remains available with:
 
 ```bash
-npm run bootstrap:demo-users
+pnpm run bootstrap:demo-users
 ```
 
-This command also regenerates the Prisma client first, so seed scripts do not depend on previously generated Prisma artifacts.
+This command also regenerates the local Prisma client first, so seed scripts do not depend on previously generated Prisma artifacts.
+
+## Prisma Client Generation
+
+This project uses Prisma's local-output generator and imports Prisma from `generated/prisma/client` inside infrastructure code.
+
+- `pnpm run prisma:generate` regenerates the local client into `generated/prisma`
+- `pnpm run build`, `pnpm run start`, `pnpm run start:dev`, `pnpm run start:debug`, and the bootstrap scripts run Prisma generation automatically first
+- `pnpm run start:prod` builds first, which regenerates Prisma and compiles the local client into `dist`
+- `pnpm run build` compiles the local Prisma client into `dist/generated/prisma`, so `node dist/src/main.js` resolves the same client contract as the source runtime
+
+If Prisma loads correctly but a bootstrap or seed command fails with a missing table or column, the database schema is behind the Prisma schema. Sync it explicitly with:
+
+```bash
+pnpm run prisma:db:push
+```
 
 If your local database schema is behind the current Prisma schema, run:
 
@@ -171,7 +189,10 @@ Optional env values:
 ```env
 BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 BOOTSTRAP_ADMIN_PASSWORD=change-me-admin-password
+DATABASE_CA_BASE64=LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tLi4u
 ```
+
+`DATABASE_CA_BASE64` is optional and enables verified TLS for Postgres connections that need a custom CA chain.
 
 ### Auth Flow Notes
 

@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../../generated/prisma/client';
 import { APP_CONFIG } from '../../../bootstrap/config/app-config';
 import type { AppConfig } from '../../../bootstrap/config/app-config';
 import { createPrismaClientOptions } from './prisma-client-options';

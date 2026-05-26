@@ -4,6 +4,20 @@ import { join } from 'node:path';
 import { loadAppConfig } from './app-config';
 import { loadRuntimeAppConfig } from './app-config';
 
+const TEST_CA_CERTIFICATE = `-----BEGIN CERTIFICATE-----
+MIIBhTCCASugAwIBAgIUQGd0dW1teS1jYS1jZXJ0aWZpY2F0ZTAKBggqhkjOPQQDAjAc
+MRowGAYDVQQDDBFUZXN0IENBIENlcnRpZmljYXRlMB4XDTI2MDUyNjAwMDAwMFoXDTM2
+MDUyMzAwMDAwMFowHDEaMBgGA1UEAwwRVGVzdCBDQSBDZXJ0aWZpY2F0ZTBZMBMGByqG
+SM49AgEGCCqGSM49AwEHA0IABDv0Kx8Q6d0Sx7p0d3V8M0l0R1A5N2N4dE1uV0VhQk5r
+L0h2TmxhR0d3L1Q1T2dFbS9mbE9mRjZyM3lrd2l4a1V3dDg4Q2h3Q2xqUzBRMA4GA1Ud
+DwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBT8l7KxjQw0Q5aN
+E3S8V4mN8W7BvTAKBggqhkjOPQQDAgNHADBEAiBqjM1Yv9Z3t2m0pY2j2Q2oK6qQY9nE
+2M0VnR0z0xjPbgIgN2dWm6vK0L7f3v1a4Xx8E0kqS0C2i4vQmN0xXg1xQ0=
+-----END CERTIFICATE-----`;
+const TEST_CA_CERTIFICATE_BASE64 = Buffer.from(TEST_CA_CERTIFICATE).toString(
+  'base64',
+);
+
 function createBaseEnv(): NodeJS.ProcessEnv {
   return {
     DATABASE_URL: 'postgresql://user:password@localhost:5432/app',
@@ -26,6 +40,7 @@ describe('loadAppConfig', () => {
       },
       database: {
         url: 'postgresql://user:password@localhost:5432/app',
+        caCertificate: null,
       },
       cors: {
         allowedOrigins: [
@@ -52,6 +67,7 @@ describe('loadAppConfig', () => {
     const config = loadAppConfig(createBaseEnv());
 
     expect(config.http.port).toBe(3000);
+    expect(config.database.caCertificate).toBeNull();
     expect(config.swagger.enabled).toBe(false);
     expect(config.auth.refreshCookieName).toBe('refresh_token');
     expect(config.auth.accessTokenTtlSeconds).toBe(900);
@@ -99,11 +115,43 @@ describe('loadAppConfig', () => {
       'Invalid environment configuration: BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD must be configured together',
     );
   });
+
+  it('decodes DATABASE_CA_BASE64 into a PEM certificate', () => {
+    const config = loadAppConfig({
+      ...createBaseEnv(),
+      DATABASE_CA_BASE64: TEST_CA_CERTIFICATE_BASE64,
+    });
+
+    expect(config.database.caCertificate).toBe(TEST_CA_CERTIFICATE);
+  });
+
+  it('fails fast when DATABASE_CA_BASE64 is not valid base64 PEM data', () => {
+    expect(() =>
+      loadAppConfig({
+        ...createBaseEnv(),
+        DATABASE_CA_BASE64: 'not-valid-base64',
+      }),
+    ).toThrow(
+      'Invalid environment configuration: DATABASE_CA_BASE64 must be a base64-encoded PEM certificate',
+    );
+  });
+
+  it('fails fast when DATABASE_CA_BASE64 is explicitly empty', () => {
+    expect(() =>
+      loadAppConfig({
+        ...createBaseEnv(),
+        DATABASE_CA_BASE64: '   ',
+      }),
+    ).toThrow(
+      'Invalid environment configuration: DATABASE_CA_BASE64 must be a base64-encoded PEM certificate',
+    );
+  });
 });
 
 describe('loadRuntimeAppConfig', () => {
   const originalCwd = process.cwd();
   const originalDatabaseUrl = process.env.DATABASE_URL;
+  const originalDatabaseCaBase64 = process.env.DATABASE_CA_BASE64;
   const originalNodeEnv = process.env.NODE_ENV;
   const originalJwtAccessSecret = process.env.JWT_ACCESS_SECRET;
   const originalPort = process.env.PORT;
@@ -124,6 +172,12 @@ describe('loadRuntimeAppConfig', () => {
       delete process.env.DATABASE_URL;
     } else {
       process.env.DATABASE_URL = originalDatabaseUrl;
+    }
+
+    if (originalDatabaseCaBase64 === undefined) {
+      delete process.env.DATABASE_CA_BASE64;
+    } else {
+      process.env.DATABASE_CA_BASE64 = originalDatabaseCaBase64;
     }
 
     if (originalJwtAccessSecret === undefined) {
@@ -179,6 +233,7 @@ describe('loadRuntimeAppConfig', () => {
       },
       database: {
         url: 'postgresql://from-env-file',
+        caCertificate: null,
       },
       cors: {
         allowedOrigins: [],

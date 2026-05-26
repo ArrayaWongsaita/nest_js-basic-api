@@ -10,6 +10,7 @@ const rawEnvSchema = z.object({
     .default('development'),
   PORT: z.coerce.number().int().positive().default(DEFAULT_HTTP_PORT),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DATABASE_CA_BASE64: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_ACCESS_TTL: z.string().min(1).default('15m'),
   AUTH_REFRESH_COOKIE_NAME: z.string().min(1).default('refresh_token'),
@@ -32,6 +33,7 @@ export type AppConfig = {
   };
   database: {
     url: string;
+    caCertificate: string | null;
   };
   cors: {
     allowedOrigins: string[];
@@ -84,6 +86,9 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
   const swaggerPassword = env.SWAGGER_PASSWORD?.trim() || null;
   const bootstrapAdminEmail = env.BOOTSTRAP_ADMIN_EMAIL?.trim() || null;
   const bootstrapAdminPassword = env.BOOTSTRAP_ADMIN_PASSWORD?.trim() || null;
+  const databaseCaCertificate = parseDatabaseCaCertificate(
+    env.DATABASE_CA_BASE64,
+  );
 
   if (env.SWAGGER_ENABLED && (!swaggerUsername || !swaggerPassword)) {
     throw new Error(
@@ -107,6 +112,7 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
     },
     database: {
       url: env.DATABASE_URL,
+      caCertificate: databaseCaCertificate,
     },
     cors: {
       allowedOrigins: parseCorsAllowedOrigins(env.CORS_ALLOWED_ORIGINS),
@@ -169,6 +175,45 @@ function stripWrappingQuotes(value: string): string {
   }
 
   return value;
+}
+
+function parseDatabaseCaCertificate(
+  value: string | undefined,
+): string | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    throw new Error(
+      'Invalid environment configuration: DATABASE_CA_BASE64 must be a base64-encoded PEM certificate',
+    );
+  }
+
+  const normalizedValue = trimmedValue.replace(/\s+/g, '');
+
+  if (
+    normalizedValue.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+=*$/.test(normalizedValue)
+  ) {
+    throw new Error(
+      'Invalid environment configuration: DATABASE_CA_BASE64 must be a base64-encoded PEM certificate',
+    );
+  }
+
+  const certificate = Buffer.from(normalizedValue, 'base64')
+    .toString('utf8')
+    .trim();
+
+  if (!certificate.includes('BEGIN CERTIFICATE')) {
+    throw new Error(
+      'Invalid environment configuration: DATABASE_CA_BASE64 must be a base64-encoded PEM certificate',
+    );
+  }
+
+  return certificate;
 }
 
 function parseCorsAllowedOrigins(value: string | undefined): string[] {

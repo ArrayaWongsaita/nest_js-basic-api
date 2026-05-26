@@ -16,7 +16,10 @@ function createAppConfig(): AppConfig {
   return {
     environment: 'test',
     http: { port: 3000 },
-    database: { url: 'postgresql://example.invalid/db' },
+    database: {
+      url: 'postgresql://example.invalid/db',
+      caCertificate: null,
+    },
     cors: { allowedOrigins: [] },
     auth: {
       accessTokenSecret: 'secret',
