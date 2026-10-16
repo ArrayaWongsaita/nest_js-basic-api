@@ -17,7 +17,9 @@ import { ApiCreateEndpointDocs } from '../../../../../bootstrap/http/decorators/
 import { RequirePermissions } from '../../../../../shared/presentation/http/auth/require-permissions.decorator';
 import { createSuccessResponse, type HttpSuccessResponse } from '../../../../../shared/presentation/http/response/http-response-envelope';
 import { RESET_ADMIN_DATA_USE_CASE } from '../../../application/tokens';
-import { ResetAdminDataUseCase } from '../../../application/use-cases/reset-admin-data.use-case';
+import type { AuditedResetAdminData } from '../../../application/audit/admin-audit-descriptors';
+import { CurrentUser } from '../../../../../shared/presentation/http/auth/current-user.decorator';
+import type { AuthenticatedUserContext } from '../../../../../shared/presentation/http/auth/authenticated-user.context';
 import { SYSTEM_RESET_ANY_PERMISSION } from '../../../domain/constants/permission-name.constants';
 import {
   AdminDataResetHttpResponseDto,
@@ -32,7 +34,7 @@ import { AdminPresenter } from '../presenters/admin.presenter';
 export class AdminDataResetsController {
   constructor(
     @Inject(RESET_ADMIN_DATA_USE_CASE)
-    private readonly resetAdminDataUseCase: ResetAdminDataUseCase,
+    private readonly resetAdminDataUseCase: AuditedResetAdminData,
   ) {}
 
   @Post()
@@ -51,9 +53,10 @@ export class AdminDataResetsController {
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
   @ApiForbiddenErrorResponse('The authenticated user is missing system.reset.any.')
   async createReset(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Body() body: CreateAdminDataResetBodyDto,
   ): Promise<HttpSuccessResponse<AdminDataResetResponseDto>> {
-    const result = await this.resetAdminDataUseCase.execute({
+    const result = await this.resetAdminDataUseCase.execute(currentUser.userId, {
       scope: body.scope,
       targetUserId: body.targetUserId ?? null,
       domains: body.domains,

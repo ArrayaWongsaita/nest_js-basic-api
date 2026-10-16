@@ -35,8 +35,10 @@ import {
 import { CreateAdminUserUseCase } from '../../../application/use-cases/create-admin-user.use-case';
 import { GetAdminUserUseCase } from '../../../application/use-cases/get-admin-user.use-case';
 import { ListAdminUsersUseCase } from '../../../application/use-cases/list-admin-users.use-case';
-import { UpdateAdminUserRolesUseCase } from '../../../application/use-cases/update-admin-user-roles.use-case';
-import { UpdateAdminUserStatusUseCase } from '../../../application/use-cases/update-admin-user-status.use-case';
+import type {
+  AuditedUpdateUserRoles,
+  AuditedUpdateUserStatus,
+} from '../../../application/audit/admin-audit-descriptors';
 import {
   IAM_USERS_CREATE_PERMISSION,
   IAM_USERS_DEACTIVATE_PERMISSION,
@@ -74,9 +76,9 @@ export class AdminUsersController {
     @Inject(CREATE_ADMIN_USER_USE_CASE)
     private readonly createAdminUserUseCase: CreateAdminUserUseCase,
     @Inject(UPDATE_ADMIN_USER_ROLES_USE_CASE)
-    private readonly updateAdminUserRolesUseCase: UpdateAdminUserRolesUseCase,
+    private readonly updateAdminUserRolesUseCase: AuditedUpdateUserRoles,
     @Inject(UPDATE_ADMIN_USER_STATUS_USE_CASE)
-    private readonly updateAdminUserStatusUseCase: UpdateAdminUserStatusUseCase,
+    private readonly updateAdminUserStatusUseCase: AuditedUpdateUserStatus,
   ) {}
 
   @Get()
@@ -191,7 +193,7 @@ export class AdminUsersController {
     @Param() params: AdminUserRouteParamsDto,
     @Body() body: UpdateAdminUserRolesBodyDto,
   ): Promise<HttpSuccessResponse<AdminUserResponseDto>> {
-    const result = await this.updateAdminUserRolesUseCase.execute({
+    const result = await this.updateAdminUserRolesUseCase.execute(currentUser.userId, {
       actorUserId: currentUser.userId,
       userId: params.userId,
       roleNames: body.roleNames,
@@ -234,7 +236,7 @@ export class AdminUsersController {
     @Param() params: AdminUserRouteParamsDto,
     @Body() body: UpdateAdminUserStatusBodyDto,
   ): Promise<HttpSuccessResponse<AdminUserResponseDto>> {
-    const result = await this.updateAdminUserStatusUseCase.execute({
+    const result = await this.updateAdminUserStatusUseCase.execute(currentUser.userId, {
       actorUserId: currentUser.userId,
       userId: params.userId,
       isActive: body.isActive,

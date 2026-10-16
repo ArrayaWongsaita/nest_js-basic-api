@@ -7,8 +7,10 @@ import { configureHttpApp } from '../src/bootstrap/http/configure-http-app';
 import {
   ACCESS_TOKEN_ISSUER,
   ADMIN_USER_MANAGEMENT,
+  AUDIT_LOG,
   RBAC_CATALOG,
 } from '../src/contexts/iam/application/tokens';
+import { InMemoryAuditLog } from '../src/contexts/iam/application/testing/in-memory-audit-log.fake';
 import type { AccessTokenIssuer } from '../src/contexts/iam/application/ports/access-token-issuer.port';
 import { InMemoryIamAdmin } from '../src/contexts/iam/application/testing/in-memory-iam-admin.fake';
 
@@ -39,6 +41,8 @@ describe('Admin safety rules (e2e)', () => {
       .useValue(fake)
       .overrideProvider(RBAC_CATALOG)
       .useValue(fake)
+      .overrideProvider(AUDIT_LOG)
+      .useValue(new InMemoryAuditLog())
       .compile();
 
     app = moduleRef.createNestApplication();

@@ -10,6 +10,7 @@ export const IAM_PERMISSIONS_READ_PERMISSION = 'iam.permissions.read';
 export const IAM_PERMISSIONS_CREATE_PERMISSION = 'iam.permissions.create';
 export const IAM_PERMISSIONS_UPDATE_PERMISSION = 'iam.permissions.update';
 export const IAM_PERMISSIONS_DELETE_PERMISSION = 'iam.permissions.delete';
+export const IAM_AUDIT_LOGS_READ_PERMISSION = 'iam.audit_logs.read';
 export const SYSTEM_RESET_ANY_PERMISSION = 'system.reset.any';
 export const TODO_CREATE_OWN_PERMISSION = 'todo.create_own';
 export const TODO_READ_OWN_PERMISSION = 'todo.read_own';
@@ -49,6 +50,7 @@ export const DEFAULT_PERMISSION_NAMES = [
   IAM_PERMISSIONS_CREATE_PERMISSION,
   IAM_PERMISSIONS_UPDATE_PERMISSION,
   IAM_PERMISSIONS_DELETE_PERMISSION,
+  IAM_AUDIT_LOGS_READ_PERMISSION,
   SYSTEM_RESET_ANY_PERMISSION,
   TODO_CREATE_OWN_PERMISSION,
   TODO_READ_OWN_PERMISSION,

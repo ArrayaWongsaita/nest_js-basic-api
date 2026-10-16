@@ -33,10 +33,14 @@ import {
   LIST_ROLES_USE_CASE,
   UPDATE_ROLE_USE_CASE,
 } from '../../../application/tokens';
-import { CreateRoleUseCase } from '../../../application/use-cases/create-role.use-case';
-import { DeleteRoleUseCase } from '../../../application/use-cases/delete-role.use-case';
+import type {
+  AuditedCreateRole,
+  AuditedDeleteRole,
+  AuditedUpdateRole,
+} from '../../../application/audit/admin-audit-descriptors';
+import { CurrentUser } from '../../../../../shared/presentation/http/auth/current-user.decorator';
+import type { AuthenticatedUserContext } from '../../../../../shared/presentation/http/auth/authenticated-user.context';
 import { ListRolesUseCase } from '../../../application/use-cases/list-roles.use-case';
-import { UpdateRoleUseCase } from '../../../application/use-cases/update-role.use-case';
 import {
   IAM_ROLES_CREATE_PERMISSION,
   IAM_ROLES_DELETE_PERMISSION,
@@ -61,11 +65,11 @@ export class AdminRolesController {
     @Inject(LIST_ROLES_USE_CASE)
     private readonly listRolesUseCase: ListRolesUseCase,
     @Inject(CREATE_ROLE_USE_CASE)
-    private readonly createRoleUseCase: CreateRoleUseCase,
+    private readonly createRoleUseCase: AuditedCreateRole,
     @Inject(UPDATE_ROLE_USE_CASE)
-    private readonly updateRoleUseCase: UpdateRoleUseCase,
+    private readonly updateRoleUseCase: AuditedUpdateRole,
     @Inject(DELETE_ROLE_USE_CASE)
-    private readonly deleteRoleUseCase: DeleteRoleUseCase,
+    private readonly deleteRoleUseCase: AuditedDeleteRole,
   ) {}
 
   @Get()
@@ -103,9 +107,13 @@ export class AdminRolesController {
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.roles.create.')
   async createRole(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Body() body: CreateRoleBodyDto,
   ): Promise<HttpSuccessResponse<AdminRoleResponseDto>> {
-    const result = await this.createRoleUseCase.execute(body);
+    const result = await this.createRoleUseCase.execute(
+      currentUser.userId,
+      body,
+    );
 
     if (!result.ok) {
       throw new ConflictException(result.error);
@@ -130,10 +138,11 @@ export class AdminRolesController {
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.roles.update.')
   @ApiNotFoundErrorResponse('The requested role was not found.')
   async updateRole(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Param() params: AdminRoleRouteParamsDto,
     @Body() body: UpdateRoleBodyDto,
   ): Promise<HttpSuccessResponse<AdminRoleResponseDto>> {
-    const result = await this.updateRoleUseCase.execute({
+    const result = await this.updateRoleUseCase.execute(currentUser.userId, {
       roleId: params.roleId,
       name: body.name,
       permissionNames: body.permissionNames,
@@ -165,8 +174,14 @@ export class AdminRolesController {
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.roles.delete.')
   @ApiNotFoundErrorResponse('The requested role was not found.')
-  async deleteRole(@Param() params: AdminRoleRouteParamsDto): Promise<void> {
-    const result = await this.deleteRoleUseCase.execute(params.roleId);
+  async deleteRole(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+    @Param() params: AdminRoleRouteParamsDto,
+  ): Promise<void> {
+    const result = await this.deleteRoleUseCase.execute(
+      currentUser.userId,
+      params.roleId,
+    );
 
     if (!result.ok) {
       if (result.error === 'Role was not found.') {
