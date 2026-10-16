@@ -47,6 +47,7 @@ export interface AdminUserManagementPort {
     userId: string,
     isActive: boolean,
   ): Promise<AdminUserView | null>;
+  countActiveAdmins(): Promise<number>;
   countSystemUsers(): Promise<number>;
   clearAuthSessionsForUser(userId: string): Promise<number>;
   clearAllAuthSessions(): Promise<number>;
