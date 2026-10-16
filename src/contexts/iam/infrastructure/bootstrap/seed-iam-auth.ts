@@ -39,14 +39,8 @@ export async function seedIamAuthData(
       },
     });
 
-    await prisma.rolePermission.deleteMany({
-      where: {
-        role: {
-          name: roleName,
-        },
-      },
-    });
-
+    // Only add missing grants. Never delete: admin changes and custom roles
+    // must survive re-seeding.
     for (const permissionName of DEFAULT_ROLE_PERMISSION_MAP[roleName]) {
       await prisma.rolePermission.upsert({
         where: {
