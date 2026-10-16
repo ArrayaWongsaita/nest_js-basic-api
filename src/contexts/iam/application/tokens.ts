@@ -42,5 +42,9 @@ export const DELETE_PERMISSION_USE_CASE = Symbol(
   'DELETE_PERMISSION_USE_CASE',
 );
 export const RESET_ADMIN_DATA_USE_CASE = Symbol('RESET_ADMIN_DATA_USE_CASE');
-export const DEMO_USER_SEEDER = Symbol('DEMO_USER_SEEDER');
+export const AUDIT_LOG = Symbol('AUDIT_LOG');
+export const LIST_AUDIT_ENTRIES_USE_CASE = Symbol(
+  'LIST_AUDIT_ENTRIES_USE_CASE',
+);
+export const DEMO_USER_SEEDER =Symbol('DEMO_USER_SEEDER');
 export const SEED_DEMO_USERS_USE_CASE = Symbol('SEED_DEMO_USERS_USE_CASE');

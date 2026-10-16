@@ -7,6 +7,8 @@ import { AccessTokenAuthGuard } from '../../shared/presentation/http/auth/access
 import {
   ADMIN_USER_MANAGEMENT,
   ACCESS_TOKEN_ISSUER,
+  AUDIT_LOG,
+  LIST_AUDIT_ENTRIES_USE_CASE,
   AUTHENTICATE_USER_USE_CASE,
   AUTH_SESSION_REPOSITORY,
   CREATE_ADMIN_USER_USE_CASE,
@@ -38,6 +40,23 @@ import {
   USER_ACCESS_READER,
   USER_REPOSITORY,
 } from './application/tokens';
+import { AuditedAction } from './application/audit/audited-action';
+import {
+  describeDataReset,
+  describeDemoSeed,
+  describePermissionCreation,
+  describePermissionDeletion,
+  describePermissionUpdate,
+  describeRoleCreation,
+  describeRoleDeletion,
+  describeRoleUpdate,
+  describeUserRolesChange,
+  describeUserStatusChange,
+} from './application/audit/admin-audit-descriptors';
+import type { AuditLogPort } from './application/ports/audit-log.port';
+import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entries.use-case';
+import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
+import { AdminAuditLogsController } from './presentation/http/controllers/admin-audit-logs.controller';
 import { AdminMaintenancePolicy } from './application/ports/admin-maintenance-policy.port';
 import { AuthenticateUserUseCase } from './application/use-cases/authenticate-user.use-case';
 import { CreateAdminUserUseCase } from './application/use-cases/create-admin-user.use-case';
@@ -97,6 +116,7 @@ function toAdminMaintenancePolicy(
     UsersController,
     AdminUsersController,
     AdminRolesController,
+    AdminAuditLogsController,
     AdminPermissionsController,
     AdminDataResetsController,
     AdminDemoUserSeedsController,
@@ -113,6 +133,16 @@ function toAdminMaintenancePolicy(
     {
       provide: RBAC_CATALOG,
       useExisting: ADMIN_USER_MANAGEMENT,
+    },
+    {
+      provide: AUDIT_LOG,
+      useClass: PrismaAuditLogRepository,
+    },
+    {
+      provide: LIST_AUDIT_ENTRIES_USE_CASE,
+      useFactory: (auditLog: AuditLogPort) =>
+        new ListAuditEntriesUseCase(auditLog),
+      inject: [AUDIT_LOG],
     },
     {
       provide: DEMO_USER_SEEDER,
@@ -281,14 +311,27 @@ function toAdminMaintenancePolicy(
       useFactory: (
         adminUserManagement: PrismaIamAdminGateway,
         rbacCatalog: PrismaIamAdminGateway,
-      ) => new UpdateAdminUserRolesUseCase(adminUserManagement, rbacCatalog),
-      inject: [ADMIN_USER_MANAGEMENT, RBAC_CATALOG],
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateAdminUserRolesUseCase(adminUserManagement, rbacCatalog),
+          auditLog,
+          describeUserRolesChange,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_ADMIN_USER_STATUS_USE_CASE,
-      useFactory: (adminUserManagement: PrismaIamAdminGateway) =>
-        new UpdateAdminUserStatusUseCase(adminUserManagement),
-      inject: [ADMIN_USER_MANAGEMENT],
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateAdminUserStatusUseCase(adminUserManagement),
+          auditLog,
+          describeUserStatusChange,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
     },
     {
       provide: LIST_ROLES_USE_CASE,
@@ -298,21 +341,42 @@ function toAdminMaintenancePolicy(
     },
     {
       provide: CREATE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new CreateRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new CreateRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleCreation,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new UpdateRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleUpdate,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: DELETE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new DeleteRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeleteRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleDeletion,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: LIST_PERMISSIONS_USE_CASE,
@@ -322,21 +386,42 @@ function toAdminMaintenancePolicy(
     },
     {
       provide: CREATE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new CreatePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new CreatePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionCreation,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new UpdatePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdatePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionUpdate,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: DELETE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new DeletePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeletePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionDeletion,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     PrismaTodoResetHandler,
     {
@@ -354,18 +439,24 @@ function toAdminMaintenancePolicy(
         adminUserManagement: PrismaIamAdminGateway,
         rbacCatalog: PrismaIamAdminGateway,
         appConfig: AppConfig,
+        auditLog: AuditLogPort,
       ) =>
-        new ResetAdminDataUseCase(
-          handlers,
-          adminUserManagement,
-          rbacCatalog,
-          toAdminMaintenancePolicy(appConfig),
+        new AuditedAction(
+          new ResetAdminDataUseCase(
+            handlers,
+            adminUserManagement,
+            rbacCatalog,
+            toAdminMaintenancePolicy(appConfig),
+          ),
+          auditLog,
+          describeDataReset,
         ),
       inject: [
         RESETTABLE_DOMAINS,
         ADMIN_USER_MANAGEMENT,
         RBAC_CATALOG,
         APP_CONFIG,
+        AUDIT_LOG,
       ],
     },
     {
@@ -373,12 +464,17 @@ function toAdminMaintenancePolicy(
       useFactory: (
         demoUserSeeder: PrismaDemoUserSeedGateway,
         appConfig: AppConfig,
+        auditLog: AuditLogPort,
       ) =>
-        new SeedDemoUsersUseCase(
-          demoUserSeeder,
-          toAdminMaintenancePolicy(appConfig),
+        new AuditedAction(
+          new SeedDemoUsersUseCase(
+            demoUserSeeder,
+            toAdminMaintenancePolicy(appConfig),
+          ),
+          auditLog,
+          describeDemoSeed,
         ),
-      inject: [DEMO_USER_SEEDER, APP_CONFIG],
+      inject: [DEMO_USER_SEEDER, APP_CONFIG, AUDIT_LOG],
     },
     {
       provide: APP_GUARD,

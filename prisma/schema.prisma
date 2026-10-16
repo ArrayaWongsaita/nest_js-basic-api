@@ -90,6 +90,24 @@ model AuthSession {
   @@index([expiresAt])
 }
 
+// Append-only record of administrative actions. No foreign keys on purpose:
+// entries must outlive the users, roles and permissions they refer to.
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String?
+  outcome     String
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorUserId])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
 // ====================
 // Todo
 // ====================

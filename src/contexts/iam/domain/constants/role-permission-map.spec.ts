@@ -4,6 +4,7 @@ import {
   BOOK_READ_OWN_PERMISSION,
   BOOK_UPDATE_OWN_PERMISSION,
   DEFAULT_PERMISSION_NAMES,
+  IAM_AUDIT_LOGS_READ_PERMISSION,
   EXPENSE_CREATE_OWN_PERMISSION,
   EXPENSE_DELETE_OWN_PERMISSION,
   EXPENSE_READ_OWN_PERMISSION,
@@ -67,6 +68,15 @@ describe('DEFAULT_ROLE_PERMISSION_MAP', () => {
   it('grants the admin role every defined permission', () => {
     expect([...DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]].sort()).toEqual(
       [...DEFAULT_PERMISSION_NAMES].sort(),
+    );
+  });
+
+  it('grants audit-log read to admin only', () => {
+    expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toContain(
+      IAM_AUDIT_LOGS_READ_PERMISSION,
+    );
+    expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+      IAM_AUDIT_LOGS_READ_PERMISSION,
     );
   });
 });
