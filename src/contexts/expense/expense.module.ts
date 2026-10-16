@@ -1,6 +1,19 @@
 import { Module } from '@nestjs/common';
 import { DbModule } from '../../shared/infrastructure/database';
+import { ForExistingUser } from '../../shared/application/for-existing-user';
+import { USER_EXISTENCE } from '../../shared/application/tokens';
+import type { UserExistencePort } from '../../shared/application/user-existence.port';
+import { AuditedAction } from '../iam/application/audit/audited-action';
+import type { AuditLogPort } from '../iam/application/ports/audit-log.port';
+import { AUDIT_LOG } from '../iam/application/tokens';
+import { IamModule } from '../iam/iam.module';
+import { describeAdminExpenseDeletion } from './application/audit/expense-audit-descriptors';
+import { ListUserExpensesAsResultUseCase } from './application/use-cases/list-user-expenses-as-result.use-case';
+import { AdminUserExpensesController } from './presentation/http/controllers/admin-user-expenses.controller';
 import {
+  ADMIN_DELETE_USER_EXPENSE_USE_CASE,
+  ADMIN_GET_USER_EXPENSE_USE_CASE,
+  ADMIN_LIST_USER_EXPENSES_USE_CASE,
   CREATE_EXPENSE_USE_CASE,
   DELETE_EXPENSE_USE_CASE,
   GET_EXPENSE_USE_CASE,
@@ -17,8 +30,8 @@ import { PrismaExpenseRepository } from './infrastructure/persistence/prisma/pri
 import { AuthenticatedExpensesController } from './presentation/http/controllers/authenticated-expenses.controller';
 
 @Module({
-  imports: [DbModule],
-  controllers: [AuthenticatedExpensesController],
+  imports: [DbModule, IamModule],
+  controllers: [AuthenticatedExpensesController, AdminUserExpensesController],
   providers: [
     {
       provide: EXPENSE_REPOSITORY,
@@ -53,6 +66,42 @@ import { AuthenticatedExpensesController } from './presentation/http/controllers
       useFactory: (expenseRepository: PrismaExpenseRepository) =>
         new DeleteExpenseUseCase(expenseRepository),
       inject: [EXPENSE_REPOSITORY],
+    },
+    {
+      provide: ADMIN_LIST_USER_EXPENSES_USE_CASE,
+      useFactory: (
+        expenseRepository: PrismaExpenseRepository,
+        users: UserExistencePort,
+      ) =>
+        new ForExistingUser(
+          new ListUserExpensesAsResultUseCase(
+            new ListUserExpensesUseCase(expenseRepository),
+          ),
+          users,
+        ),
+      inject: [EXPENSE_REPOSITORY, USER_EXISTENCE],
+    },
+    {
+      provide: ADMIN_GET_USER_EXPENSE_USE_CASE,
+      useFactory: (
+        expenseRepository: PrismaExpenseRepository,
+        users: UserExistencePort,
+      ) => new ForExistingUser(new GetExpenseUseCase(expenseRepository), users),
+      inject: [EXPENSE_REPOSITORY, USER_EXISTENCE],
+    },
+    {
+      provide: ADMIN_DELETE_USER_EXPENSE_USE_CASE,
+      useFactory: (
+        expenseRepository: PrismaExpenseRepository,
+        users: UserExistencePort,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new ForExistingUser(new DeleteExpenseUseCase(expenseRepository), users),
+          auditLog,
+          describeAdminExpenseDeletion,
+        ),
+      inject: [EXPENSE_REPOSITORY, USER_EXISTENCE, AUDIT_LOG],
     },
   ],
 })
