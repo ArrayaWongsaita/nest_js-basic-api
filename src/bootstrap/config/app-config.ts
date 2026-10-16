@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 
 const DEFAULT_HTTP_PORT = 3000;
+// Never raise above the previous default (15m); revocation latency equals this.
+const MAX_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 
 const rawEnvSchema = z.object({
   NODE_ENV: z
@@ -12,7 +14,7 @@ const rawEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DATABASE_CA_BASE64: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
-  JWT_ACCESS_TTL: z.string().min(1).default('15m'),
+  JWT_ACCESS_TTL: z.string().min(1).default('10m'),
   AUTH_REFRESH_COOKIE_NAME: z.string().min(1).default('refresh_token'),
   AUTH_REFRESH_TTL: z.string().min(1).default('30d'),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
@@ -24,6 +26,10 @@ const rawEnvSchema = z.object({
     .transform((value) => value === 'true'),
   SWAGGER_USERNAME: z.string().optional(),
   SWAGGER_PASSWORD: z.string().optional(),
+  ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type AppConfig = {
@@ -52,6 +58,9 @@ export type AppConfig = {
     enabled: boolean;
     username: string | null;
     password: string | null;
+  };
+  adminMaintenance: {
+    allowInProduction: boolean;
   };
 };
 
@@ -119,7 +128,7 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
     },
     auth: {
       accessTokenSecret: env.JWT_ACCESS_SECRET,
-      accessTokenTtlSeconds: parseDurationToSeconds(env.JWT_ACCESS_TTL),
+      accessTokenTtlSeconds: parseAccessTokenTtlSeconds(env.JWT_ACCESS_TTL),
       refreshCookieName: env.AUTH_REFRESH_COOKIE_NAME.trim(),
       refreshTokenTtlSeconds: parseDurationToSeconds(env.AUTH_REFRESH_TTL),
       bootstrapAdmin:
@@ -134,6 +143,9 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
       enabled: env.SWAGGER_ENABLED,
       username: swaggerUsername,
       password: swaggerPassword,
+    },
+    adminMaintenance: {
+      allowInProduction: env.ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION,
     },
   };
 }
@@ -177,9 +189,7 @@ function stripWrappingQuotes(value: string): string {
   return value;
 }
 
-function parseDatabaseCaCertificate(
-  value: string | undefined,
-): string | null {
+function parseDatabaseCaCertificate(value: string | undefined): string | null {
   if (value === undefined) {
     return null;
   }
@@ -225,6 +235,18 @@ function parseCorsAllowedOrigins(value: string | undefined): string[] {
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
+}
+
+function parseAccessTokenTtlSeconds(value: string): number {
+  const seconds = parseDurationToSeconds(value);
+
+  if (seconds < 1 || seconds > MAX_ACCESS_TOKEN_TTL_SECONDS) {
+    throw new Error(
+      `Invalid environment configuration: JWT_ACCESS_TTL must be between 1 second and 15 minutes, received "${value}"`,
+    );
+  }
+
+  return seconds;
 }
 
 function parseDurationToSeconds(value: string): number {

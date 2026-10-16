@@ -14,9 +14,8 @@ DwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBT8l7KxjQw0Q5aN
 E3S8V4mN8W7BvTAKBggqhkjOPQQDAgNHADBEAiBqjM1Yv9Z3t2m0pY2j2Q2oK6qQY9nE
 2M0VnR0z0xjPbgIgN2dWm6vK0L7f3v1a4Xx8E0kqS0C2i4vQmN0xXg1xQ0=
 -----END CERTIFICATE-----`;
-const TEST_CA_CERTIFICATE_BASE64 = Buffer.from(TEST_CA_CERTIFICATE).toString(
-  'base64',
-);
+const TEST_CA_CERTIFICATE_BASE64 =
+  Buffer.from(TEST_CA_CERTIFICATE).toString('base64');
 
 function createBaseEnv(): NodeJS.ProcessEnv {
   return {
@@ -50,7 +49,7 @@ describe('loadAppConfig', () => {
       },
       auth: {
         accessTokenSecret: 'test-access-secret',
-        accessTokenTtlSeconds: 900,
+        accessTokenTtlSeconds: 600,
         refreshCookieName: 'refresh_token',
         refreshTokenTtlSeconds: 2592000,
         bootstrapAdmin: null,
@@ -59,6 +58,9 @@ describe('loadAppConfig', () => {
         enabled: false,
         username: null,
         password: null,
+      },
+      adminMaintenance: {
+        allowInProduction: false,
       },
     });
   });
@@ -70,8 +72,23 @@ describe('loadAppConfig', () => {
     expect(config.database.caCertificate).toBeNull();
     expect(config.swagger.enabled).toBe(false);
     expect(config.auth.refreshCookieName).toBe('refresh_token');
-    expect(config.auth.accessTokenTtlSeconds).toBe(900);
+    expect(config.auth.accessTokenTtlSeconds).toBe(600);
   });
+
+  it('allows lowering the access token lifetime through JWT_ACCESS_TTL', () => {
+    const config = loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: '5m' });
+
+    expect(config.auth.accessTokenTtlSeconds).toBe(300);
+  });
+
+  it.each(['16m', '1h', '0s', 'abc'])(
+    'rejects JWT_ACCESS_TTL=%s at startup',
+    (ttl) => {
+      expect(() =>
+        loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: ttl }),
+      ).toThrow('Invalid environment configuration');
+    },
+  );
 
   it('throws a readable error when required env values are missing', () => {
     expect(() => loadAppConfig({})).toThrow(
@@ -113,6 +130,37 @@ describe('loadAppConfig', () => {
       }),
     ).toThrow(
       'Invalid environment configuration: BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD must be configured together',
+    );
+  });
+
+  it('keeps admin maintenance endpoints disabled in production by default', () => {
+    const config = loadAppConfig({
+      ...createBaseEnv(),
+      NODE_ENV: 'production',
+    });
+
+    expect(config.environment).toBe('production');
+    expect(config.adminMaintenance.allowInProduction).toBe(false);
+  });
+
+  it('enables admin maintenance endpoints in production when explicitly configured', () => {
+    const config = loadAppConfig({
+      ...createBaseEnv(),
+      NODE_ENV: 'production',
+      ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION: 'true',
+    });
+
+    expect(config.adminMaintenance.allowInProduction).toBe(true);
+  });
+
+  it('rejects an invalid ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION value', () => {
+    expect(() =>
+      loadAppConfig({
+        ...createBaseEnv(),
+        ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION: 'yes',
+      }),
+    ).toThrow(
+      'Invalid environment configuration: ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION',
     );
   });
 
@@ -240,7 +288,7 @@ describe('loadRuntimeAppConfig', () => {
       },
       auth: {
         accessTokenSecret: 'from-env-secret',
-        accessTokenTtlSeconds: 900,
+        accessTokenTtlSeconds: 600,
         refreshCookieName: 'refresh_token',
         refreshTokenTtlSeconds: 2592000,
         bootstrapAdmin: null,
@@ -249,6 +297,9 @@ describe('loadRuntimeAppConfig', () => {
         enabled: true,
         username: 'swagger',
         password: 'secret',
+      },
+      adminMaintenance: {
+        allowInProduction: false,
       },
     });
   });

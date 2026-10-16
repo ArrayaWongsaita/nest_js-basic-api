@@ -11,7 +11,6 @@ Current DTO responsibilities:
 
 List DTO conventions:
 
-- `GET /todos` and `GET /users/:userId/todos` reuse the same Zod query DTO.
 - Supported list query fields are `isCompleted`, `search`, `page`, and `limit`.
 - Paginated list responses use a success envelope with `{ success, data, meta }`.
 - The nested `data` object contains `{ userId, items }`.

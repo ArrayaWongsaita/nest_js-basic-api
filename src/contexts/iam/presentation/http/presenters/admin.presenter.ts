@@ -1,6 +1,7 @@
 import { AdminDataResetResult } from '../../../application/dto/admin-data-reset.result';
 import { DemoUserSeedResult } from '../../../application/dto/demo-user-seed.result';
 import { AdminUserListResult } from '../../../application/dto/admin-user-list.result';
+import { AuditEntryListResult } from '../../../application/use-cases/list-audit-entries.use-case';
 import { AdminUserView } from '../../../application/ports/admin-user-management.port';
 import { PermissionView, RoleView } from '../../../application/ports/rbac-catalog.port';
 
@@ -11,6 +12,7 @@ export class AdminPresenter {
       email: user.email,
       isActive: user.isActive,
       isSystem: user.isSystem,
+      deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
       roles: user.roles.map((role) => ({
         id: role.id,
         name: role.name,
@@ -26,6 +28,33 @@ export class AdminPresenter {
   }
 
   static toUserListMeta(result: AdminUserListResult) {
+    return {
+      page: result.page,
+      limit: result.limit,
+      totalItems: result.totalItems,
+      totalPages: result.totalPages,
+    };
+  }
+
+  static toAuditEntryListResponse(result: AuditEntryListResult) {
+    return result.items.map((entry) => ({
+      id: entry.id,
+      actorUserId: entry.actorUserId,
+      action: entry.action,
+      targetType: entry.targetType,
+      targetId: entry.targetId,
+      outcome: entry.outcome,
+      details: entry.details,
+      createdAt: entry.createdAt.toISOString(),
+    }));
+  }
+
+  static toListMeta(result: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  }) {
     return {
       page: result.page,
       limit: result.limit,

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/database/prisma.service';
+import { ADMIN_ROLE_NAME } from '../../../domain/constants/role-name.constants';
 import {
   AdminAssignedRoleView,
   AdminUserListFilters,
@@ -61,7 +62,9 @@ export class PrismaIamAdminGateway
     ]);
 
     return {
-      items: users.map((user) => mapAdminUserView(user)).filter(Boolean) as AdminUserView[],
+      items: users
+        .map((user) => mapAdminUserView(user))
+        .filter(Boolean) as AdminUserView[],
       totalItems,
     };
   }
@@ -93,22 +96,24 @@ export class PrismaIamAdminGateway
     userId: string,
     roleNames: readonly string[],
   ): Promise<AdminUserView | null> {
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        roles: {
-          deleteMany: {},
-          create: roleNames.map((roleName) => ({
-            role: {
-              connect: {
-                name: roleName,
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: {
+          roles: {
+            deleteMany: {},
+            create: roleNames.map((roleName) => ({
+              role: {
+                connect: {
+                  name: roleName,
+                },
               },
-            },
-          })),
+            })),
+          },
         },
-      },
-      include: adminUserInclude,
-    }).catch(() => null);
+        include: adminUserInclude,
+      })
+      .catch(() => null);
 
     return mapAdminUserView(user);
   }
@@ -117,13 +122,49 @@ export class PrismaIamAdminGateway
     userId: string,
     isActive: boolean,
   ): Promise<AdminUserView | null> {
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: { isActive },
-      include: adminUserInclude,
-    }).catch(() => null);
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { isActive },
+        include: adminUserInclude,
+      })
+      .catch(() => null);
 
     return mapAdminUserView(user);
+  }
+
+  async softDeleteUser(userId: string): Promise<AdminUserView | null> {
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { deletedAt: new Date() },
+        include: adminUserInclude,
+      })
+      .catch(() => null);
+
+    return mapAdminUserView(user);
+  }
+
+  async restoreUser(userId: string): Promise<AdminUserView | null> {
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { deletedAt: null },
+        include: adminUserInclude,
+      })
+      .catch(() => null);
+
+    return mapAdminUserView(user);
+  }
+
+  async countActiveAdmins(): Promise<number> {
+    return this.prisma.user.count({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { name: ADMIN_ROLE_NAME } } },
+      },
+    });
   }
 
   async countSystemUsers(): Promise<number> {
@@ -218,23 +259,25 @@ export class PrismaIamAdminGateway
   }
 
   async updateRole(input: UpdateRoleInput): Promise<RoleView | null> {
-    const role = await this.prisma.role.update({
-      where: { id: input.roleId },
-      data: {
-        name: input.name,
-        permissions: {
-          deleteMany: {},
-          create: input.permissionNames.map((permissionName) => ({
-            permission: {
-              connect: {
-                name: permissionName,
+    const role = await this.prisma.role
+      .update({
+        where: { id: input.roleId },
+        data: {
+          name: input.name,
+          permissions: {
+            deleteMany: {},
+            create: input.permissionNames.map((permissionName) => ({
+              permission: {
+                connect: {
+                  name: permissionName,
+                },
               },
-            },
-          })),
+            })),
+          },
         },
-      },
-      include: roleInclude,
-    }).catch(() => null);
+        include: roleInclude,
+      })
+      .catch(() => null);
 
     return role ? mapRoleView(role) : null;
   }
@@ -263,7 +306,9 @@ export class PrismaIamAdminGateway
     return permissions.map(mapPermissionView);
   }
 
-  async findPermissionById(permissionId: string): Promise<PermissionView | null> {
+  async findPermissionById(
+    permissionId: string,
+  ): Promise<PermissionView | null> {
     const permission = await this.prisma.permission.findUnique({
       where: { id: permissionId },
     });
@@ -279,7 +324,9 @@ export class PrismaIamAdminGateway
     return permission ? mapPermissionView(permission) : null;
   }
 
-  async createPermission(input: CreatePermissionInput): Promise<PermissionView> {
+  async createPermission(
+    input: CreatePermissionInput,
+  ): Promise<PermissionView> {
     const permission = await this.prisma.permission.create({
       data: {
         name: input.name,
@@ -293,10 +340,12 @@ export class PrismaIamAdminGateway
   async updatePermission(
     input: UpdatePermissionInput,
   ): Promise<PermissionView | null> {
-    const permission = await this.prisma.permission.update({
-      where: { id: input.permissionId },
-      data: { name: input.name },
-    }).catch(() => null);
+    const permission = await this.prisma.permission
+      .update({
+        where: { id: input.permissionId },
+        data: { name: input.name },
+      })
+      .catch(() => null);
 
     return permission ? mapPermissionView(permission) : null;
   }
@@ -338,6 +387,7 @@ function createAdminUserWhereClause(filters: AdminUserListFilters) {
   const trimmedSearch = filters.search?.trim();
 
   return {
+    ...(filters.includeDeleted ? {} : { deletedAt: null }),
     ...(trimmedSearch
       ? {
           OR: [
@@ -355,27 +405,35 @@ function createAdminUserWhereClause(filters: AdminUserListFilters) {
       : {
           isActive: filters.isActive,
         }),
+    ...(filters.roleName
+      ? {
+          roles: {
+            some: {
+              role: { name: filters.roleName },
+            },
+          },
+        }
+      : {}),
   };
 }
 
 function mapAdminUserView(
-  user:
-    | {
+  user: {
+    id: string;
+    email: string;
+    isActive: boolean;
+    isSystem: boolean;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    roles: Array<{
+      role: {
         id: string;
-        email: string;
-        isActive: boolean;
+        name: string;
         isSystem: boolean;
-        createdAt: Date;
-        updatedAt: Date;
-        roles: Array<{
-          role: {
-            id: string;
-            name: string;
-            isSystem: boolean;
-          };
-        }>;
-      }
-    | null,
+      };
+    }>;
+  } | null,
 ): AdminUserView | null {
   if (!user) {
     return null;
@@ -386,6 +444,7 @@ function mapAdminUserView(
     email: user.email,
     isActive: user.isActive,
     isSystem: user.isSystem,
+    deletedAt: user.deletedAt,
     roles: user.roles.map(mapAssignedRoleView),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

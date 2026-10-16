@@ -9,6 +9,7 @@ export interface AdminUserView {
   readonly email: string;
   readonly isActive: boolean;
   readonly isSystem: boolean;
+  readonly deletedAt: Date | null;
   readonly roles: readonly AdminAssignedRoleView[];
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -17,6 +18,9 @@ export interface AdminUserView {
 export interface AdminUserListFilters {
   readonly search?: string;
   readonly isActive?: boolean;
+  readonly roleName?: string;
+  /** Soft-deleted users are hidden unless this is true. */
+  readonly includeDeleted?: boolean;
 }
 
 export interface PaginatedAdminUsers {
@@ -47,6 +51,9 @@ export interface AdminUserManagementPort {
     userId: string,
     isActive: boolean,
   ): Promise<AdminUserView | null>;
+  softDeleteUser(userId: string): Promise<AdminUserView | null>;
+  restoreUser(userId: string): Promise<AdminUserView | null>;
+  countActiveAdmins(): Promise<number>;
   countSystemUsers(): Promise<number>;
   clearAuthSessionsForUser(userId: string): Promise<number>;
   clearAllAuthSessions(): Promise<number>;

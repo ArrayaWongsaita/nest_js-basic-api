@@ -7,8 +7,13 @@ import { AccessTokenAuthGuard } from '../../shared/presentation/http/auth/access
 import {
   ADMIN_USER_MANAGEMENT,
   ACCESS_TOKEN_ISSUER,
+  AUDIT_LOG,
+  LIST_AUDIT_ENTRIES_USE_CASE,
   AUTHENTICATE_USER_USE_CASE,
   AUTH_SESSION_REPOSITORY,
+  CHANGE_OWN_PASSWORD_USE_CASE,
+  RESET_ADMIN_USER_PASSWORD_USE_CASE,
+  USER_CREDENTIALS,
   CREATE_ADMIN_USER_USE_CASE,
   CREATE_PERMISSION_USE_CASE,
   CREATE_ROLE_USE_CASE,
@@ -33,11 +38,45 @@ import {
   SEED_DEMO_USERS_USE_CASE,
   UPDATE_ADMIN_USER_ROLES_USE_CASE,
   UPDATE_ADMIN_USER_STATUS_USE_CASE,
+  DELETE_ADMIN_USER_USE_CASE,
+  RESTORE_ADMIN_USER_USE_CASE,
   UPDATE_PERMISSION_USE_CASE,
   UPDATE_ROLE_USE_CASE,
   USER_ACCESS_READER,
   USER_REPOSITORY,
 } from './application/tokens';
+import { AuditedAction } from './application/audit/audited-action';
+import {
+  describeDataReset,
+  describeDemoSeed,
+  describePermissionCreation,
+  describePermissionDeletion,
+  describePermissionUpdate,
+  describeRoleCreation,
+  describeRoleDeletion,
+  describeRoleUpdate,
+  describeUserPasswordReset,
+  describeUserRolesChange,
+  describeUserStatusChange,
+  describeUserDeletion,
+  describeUserRestoration,
+} from './application/audit/admin-audit-descriptors';
+import { USER_EXISTENCE } from '../../shared/application/tokens';
+import { AdminUserExistence } from './application/services/admin-user-existence';
+import type { AdminUserManagementPort } from './application/ports/admin-user-management.port';
+import type { AuditLogPort } from './application/ports/audit-log.port';
+import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entries.use-case';
+import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
+import { AdminAuditLogsController } from './presentation/http/controllers/admin-audit-logs.controller';
+import { AdminMaintenancePolicy } from './application/ports/admin-maintenance-policy.port';
+import { ChangeOwnPasswordUseCase } from './application/use-cases/change-own-password.use-case';
+import { ResetAdminUserPasswordUseCase } from './application/use-cases/reset-admin-user-password.use-case';
+import type { UserCredentialsPort } from './application/ports/user-credentials.port';
+import type { PasswordHasher } from './application/ports/password-hasher.port';
+import type { OpaqueTokenGenerator } from './application/ports/opaque-token-generator.port';
+import type { AuthSessionRepository } from './domain/repositories/auth-session.repository';
+import type { UserAccessReader } from './application/ports/user-access-reader.port';
+import { PrismaUserCredentialsGateway } from './infrastructure/persistence/prisma/prisma-user-credentials.gateway';
 import { AuthenticateUserUseCase } from './application/use-cases/authenticate-user.use-case';
 import { CreateAdminUserUseCase } from './application/use-cases/create-admin-user.use-case';
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.use-case';
@@ -55,6 +94,8 @@ import { RegisterUserUseCase } from './application/use-cases/register-user.use-c
 import { ResetAdminDataUseCase } from './application/use-cases/reset-admin-data.use-case';
 import { SeedDemoUsersUseCase } from './application/use-cases/seed-demo-users.use-case';
 import { UpdateAdminUserRolesUseCase } from './application/use-cases/update-admin-user-roles.use-case';
+import { DeleteAdminUserUseCase } from './application/use-cases/delete-admin-user.use-case';
+import { RestoreAdminUserUseCase } from './application/use-cases/restore-admin-user.use-case';
 import { UpdateAdminUserStatusUseCase } from './application/use-cases/update-admin-user-status.use-case';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.use-case';
 import { UpdateRoleUseCase } from './application/use-cases/update-role.use-case';
@@ -79,6 +120,16 @@ import { UsersController } from './presentation/http/controllers/users.controlle
 import { APP_CONFIG, AppConfig } from '../../bootstrap/config/app-config';
 import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prisma/prisma-todo-reset.handler';
 
+function toAdminMaintenancePolicy(
+  appConfig: AppConfig,
+): AdminMaintenancePolicy {
+  return {
+    allowed:
+      appConfig.environment !== 'production' ||
+      appConfig.adminMaintenance.allowInProduction,
+  };
+}
+
 @Module({
   imports: [DbModule],
   controllers: [
@@ -86,6 +137,7 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
     UsersController,
     AdminUsersController,
     AdminRolesController,
+    AdminAuditLogsController,
     AdminPermissionsController,
     AdminDataResetsController,
     AdminDemoUserSeedsController,
@@ -104,8 +156,28 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
       useExisting: ADMIN_USER_MANAGEMENT,
     },
     {
+      provide: AUDIT_LOG,
+      useClass: PrismaAuditLogRepository,
+    },
+    {
+      provide: USER_EXISTENCE,
+      useFactory: (users: AdminUserManagementPort) =>
+        new AdminUserExistence(users),
+      inject: [ADMIN_USER_MANAGEMENT],
+    },
+    {
+      provide: LIST_AUDIT_ENTRIES_USE_CASE,
+      useFactory: (auditLog: AuditLogPort) =>
+        new ListAuditEntriesUseCase(auditLog),
+      inject: [AUDIT_LOG],
+    },
+    {
       provide: DEMO_USER_SEEDER,
       useClass: PrismaDemoUserSeedGateway,
+    },
+    {
+      provide: USER_CREDENTIALS,
+      useClass: PrismaUserCredentialsGateway,
     },
     {
       provide: USER_ACCESS_READER,
@@ -223,10 +295,7 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
         authSessionRepository: PrismaAuthSessionRepository,
         opaqueTokenHasher: Sha256OpaqueTokenHasher,
       ) =>
-        new LogoutAuthSessionUseCase(
-          authSessionRepository,
-          opaqueTokenHasher,
-        ),
+        new LogoutAuthSessionUseCase(authSessionRepository, opaqueTokenHasher),
       inject: [AUTH_SESSION_REPOSITORY, OPAQUE_TOKEN_HASHER],
     },
     {
@@ -273,14 +342,104 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
       useFactory: (
         adminUserManagement: PrismaIamAdminGateway,
         rbacCatalog: PrismaIamAdminGateway,
-      ) => new UpdateAdminUserRolesUseCase(adminUserManagement, rbacCatalog),
-      inject: [ADMIN_USER_MANAGEMENT, RBAC_CATALOG],
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateAdminUserRolesUseCase(adminUserManagement, rbacCatalog),
+          auditLog,
+          describeUserRolesChange,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_ADMIN_USER_STATUS_USE_CASE,
-      useFactory: (adminUserManagement: PrismaIamAdminGateway) =>
-        new UpdateAdminUserStatusUseCase(adminUserManagement),
-      inject: [ADMIN_USER_MANAGEMENT],
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateAdminUserStatusUseCase(adminUserManagement),
+          auditLog,
+          describeUserStatusChange,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: RESET_ADMIN_USER_PASSWORD_USE_CASE,
+      useFactory: (
+        adminUserManagement: AdminUserManagementPort,
+        credentials: UserCredentialsPort,
+        passwordHasher: PasswordHasher,
+        tokenGenerator: OpaqueTokenGenerator,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new ResetAdminUserPasswordUseCase(
+            adminUserManagement,
+            credentials,
+            passwordHasher,
+            tokenGenerator,
+          ),
+          auditLog,
+          describeUserPasswordReset,
+        ),
+      inject: [
+        ADMIN_USER_MANAGEMENT,
+        USER_CREDENTIALS,
+        PASSWORD_HASHER,
+        OPAQUE_TOKEN_GENERATOR,
+        AUDIT_LOG,
+      ],
+    },
+    {
+      provide: CHANGE_OWN_PASSWORD_USE_CASE,
+      useFactory: (
+        userAccessReader: UserAccessReader,
+        credentials: UserCredentialsPort,
+        passwordHasher: PasswordHasher,
+        passwordPolicy: PasswordPolicyService,
+        authSessionRepository: AuthSessionRepository,
+      ) =>
+        new ChangeOwnPasswordUseCase(
+          userAccessReader,
+          credentials,
+          passwordHasher,
+          passwordPolicy,
+          authSessionRepository,
+        ),
+      inject: [
+        USER_ACCESS_READER,
+        USER_CREDENTIALS,
+        PASSWORD_HASHER,
+        PASSWORD_POLICY,
+        AUTH_SESSION_REPOSITORY,
+      ],
+    },
+    {
+      provide: DELETE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeleteAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserDeletion,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: RESTORE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new RestoreAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserRestoration,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
     },
     {
       provide: LIST_ROLES_USE_CASE,
@@ -290,21 +449,42 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
     },
     {
       provide: CREATE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new CreateRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new CreateRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleCreation,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new UpdateRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdateRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleUpdate,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: DELETE_ROLE_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new DeleteRoleUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeleteRoleUseCase(rbacCatalog),
+          auditLog,
+          describeRoleDeletion,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: LIST_PERMISSIONS_USE_CASE,
@@ -314,21 +494,42 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
     },
     {
       provide: CREATE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new CreatePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new CreatePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionCreation,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: UPDATE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new UpdatePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new UpdatePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionUpdate,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     {
       provide: DELETE_PERMISSION_USE_CASE,
-      useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
-        new DeletePermissionUseCase(rbacCatalog),
-      inject: [RBAC_CATALOG],
+      useFactory: (
+        rbacCatalog: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeletePermissionUseCase(rbacCatalog),
+          auditLog,
+          describePermissionDeletion,
+        ),
+      inject: [RBAC_CATALOG, AUDIT_LOG],
     },
     PrismaTodoResetHandler,
     {
@@ -345,15 +546,43 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
         handlers: readonly [PrismaIamResetHandler | PrismaTodoResetHandler],
         adminUserManagement: PrismaIamAdminGateway,
         rbacCatalog: PrismaIamAdminGateway,
+        appConfig: AppConfig,
+        auditLog: AuditLogPort,
       ) =>
-        new ResetAdminDataUseCase(handlers, adminUserManagement, rbacCatalog),
-      inject: [RESETTABLE_DOMAINS, ADMIN_USER_MANAGEMENT, RBAC_CATALOG],
+        new AuditedAction(
+          new ResetAdminDataUseCase(
+            handlers,
+            adminUserManagement,
+            rbacCatalog,
+            toAdminMaintenancePolicy(appConfig),
+          ),
+          auditLog,
+          describeDataReset,
+        ),
+      inject: [
+        RESETTABLE_DOMAINS,
+        ADMIN_USER_MANAGEMENT,
+        RBAC_CATALOG,
+        APP_CONFIG,
+        AUDIT_LOG,
+      ],
     },
     {
       provide: SEED_DEMO_USERS_USE_CASE,
-      useFactory: (demoUserSeeder: PrismaDemoUserSeedGateway) =>
-        new SeedDemoUsersUseCase(demoUserSeeder),
-      inject: [DEMO_USER_SEEDER],
+      useFactory: (
+        demoUserSeeder: PrismaDemoUserSeedGateway,
+        appConfig: AppConfig,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new SeedDemoUsersUseCase(
+            demoUserSeeder,
+            toAdminMaintenancePolicy(appConfig),
+          ),
+          auditLog,
+          describeDemoSeed,
+        ),
+      inject: [DEMO_USER_SEEDER, APP_CONFIG, AUDIT_LOG],
     },
     {
       provide: APP_GUARD,
@@ -365,6 +594,8 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
     REGISTER_USER_USE_CASE,
     USER_REPOSITORY,
     USER_ACCESS_READER,
+    USER_EXISTENCE,
+    AUDIT_LOG,
   ],
 })
 export class IamModule {}

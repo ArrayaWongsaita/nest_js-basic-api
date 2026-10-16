@@ -46,7 +46,13 @@ class TestPasswordHasher implements PasswordHasher {
 }
 
 class StubAccessTokenIssuer implements AccessTokenIssuer {
-  issue(): Promise<IssuedAccessToken> {
+  lastPayload: Parameters<AccessTokenIssuer['issue']>[0] | null = null;
+
+  issue(
+    payload: Parameters<AccessTokenIssuer['issue']>[0],
+  ): Promise<IssuedAccessToken> {
+    this.lastPayload = payload;
+
     return Promise.resolve({
       token: 'access-token',
       expiresInSeconds: 900,
@@ -101,6 +107,8 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -140,6 +148,8 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -170,6 +180,8 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: false,
         isSystem: false,
+        mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -192,5 +204,75 @@ describe('AuthenticateUserUseCase', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('User account is inactive.');
     expect(sessionRepository.savedSession).toBeNull();
+  });
+
+  it('rejects soft-deleted users', async () => {
+    const sessionRepository = new InMemoryAuthSessionRepository();
+    const useCase = new AuthenticateUserUseCase(
+      new InMemoryUserAccessReader({
+        userId: 'user-1',
+        email: 'architect@example.com',
+        passwordHash: 'hashed:strong-password-123',
+        isActive: true,
+        isSystem: false,
+        mustChangePassword: false,
+        isDeleted: true,
+        roles: ['student'],
+        permissions: ['todo.create_own'],
+      }),
+      new TestPasswordHasher(),
+      new StubAccessTokenIssuer(),
+      sessionRepository,
+      new StubOpaqueTokenGenerator(),
+      new StubOpaqueTokenHasher(),
+      new FixedClock(new Date('2026-05-25T10:00:00.000Z')),
+      60 * 60 * 24 * 30,
+    );
+
+    const result = await useCase.execute(
+      new AuthenticateUserCommand(
+        'architect@example.com',
+        'strong-password-123',
+      ),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Invalid email or password.');
+    expect(sessionRepository.savedSession).toBeNull();
+  });
+
+  it('marks the session as password-change-only when a change is required', async () => {
+    const issuer = new StubAccessTokenIssuer();
+    const useCase = new AuthenticateUserUseCase(
+      new InMemoryUserAccessReader({
+        userId: 'user-1',
+        email: 'architect@example.com',
+        passwordHash: 'hashed:temporary-password-123',
+        isActive: true,
+        isSystem: false,
+        mustChangePassword: true,
+        isDeleted: false,
+        roles: ['student'],
+        permissions: ['todo.read_own'],
+      }),
+      new TestPasswordHasher(),
+      issuer,
+      new InMemoryAuthSessionRepository(),
+      new StubOpaqueTokenGenerator(),
+      new StubOpaqueTokenHasher(),
+      new FixedClock(new Date('2026-05-25T10:00:00.000Z')),
+      60 * 60 * 24 * 30,
+    );
+
+    const result = await useCase.execute(
+      new AuthenticateUserCommand(
+        'architect@example.com',
+        'temporary-password-123',
+      ),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(issuer.lastPayload?.mustChangePassword).toBe(true);
+    expect(result.value.response.mustChangePassword).toBe(true);
   });
 });

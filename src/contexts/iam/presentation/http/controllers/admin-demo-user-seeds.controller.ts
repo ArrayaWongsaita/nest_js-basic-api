@@ -23,7 +23,9 @@ import {
   type HttpSuccessResponse,
 } from '../../../../../shared/presentation/http/response/http-response-envelope';
 import { SEED_DEMO_USERS_USE_CASE } from '../../../application/tokens';
-import { SeedDemoUsersUseCase } from '../../../application/use-cases/seed-demo-users.use-case';
+import type { AuditedSeedDemoUsers } from '../../../application/audit/admin-audit-descriptors';
+import { CurrentUser } from '../../../../../shared/presentation/http/auth/current-user.decorator';
+import type { AuthenticatedUserContext } from '../../../../../shared/presentation/http/auth/authenticated-user.context';
 import { SYSTEM_RESET_ANY_PERMISSION } from '../../../domain/constants/permission-name.constants';
 import {
   AdminDemoUserSeedHttpResponseDto,
@@ -37,7 +39,7 @@ import { AdminPresenter } from '../presenters/admin.presenter';
 export class AdminDemoUserSeedsController {
   constructor(
     @Inject(SEED_DEMO_USERS_USE_CASE)
-    private readonly seedDemoUsersUseCase: SeedDemoUsersUseCase,
+    private readonly seedDemoUsersUseCase: AuditedSeedDemoUsers,
   ) {}
 
   @Post()
@@ -57,15 +59,26 @@ export class AdminDemoUserSeedsController {
     ],
   })
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
-  @ApiForbiddenErrorResponse('The authenticated user is missing system.reset.any.')
-  async createSeed(): Promise<
+  @ApiForbiddenErrorResponse(
+    'The authenticated user is missing system.reset.any.',
+  )
+  async createSeed(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+  ): Promise<
     HttpSuccessResponse<AdminDemoUserSeedResponseDto>
   > {
     try {
-      const result = await this.seedDemoUsersUseCase.execute();
+      const result = await this.seedDemoUsersUseCase.execute(
+        currentUser.userId,
+        undefined,
+      );
+
+      if (!result.ok) {
+        throw new ConflictException(result.error);
+      }
 
       return createSuccessResponse(
-        AdminPresenter.toDemoUserSeedResponse(result),
+        AdminPresenter.toDemoUserSeedResponse(result.value),
       );
     } catch (error) {
       if (isPrismaSchemaDriftError(error)) {

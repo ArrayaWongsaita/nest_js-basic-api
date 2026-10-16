@@ -33,10 +33,14 @@ import {
   LIST_PERMISSIONS_USE_CASE,
   UPDATE_PERMISSION_USE_CASE,
 } from '../../../application/tokens';
-import { CreatePermissionUseCase } from '../../../application/use-cases/create-permission.use-case';
-import { DeletePermissionUseCase } from '../../../application/use-cases/delete-permission.use-case';
+import type {
+  AuditedCreatePermission,
+  AuditedDeletePermission,
+  AuditedUpdatePermission,
+} from '../../../application/audit/admin-audit-descriptors';
+import { CurrentUser } from '../../../../../shared/presentation/http/auth/current-user.decorator';
+import type { AuthenticatedUserContext } from '../../../../../shared/presentation/http/auth/authenticated-user.context';
 import { ListPermissionsUseCase } from '../../../application/use-cases/list-permissions.use-case';
-import { UpdatePermissionUseCase } from '../../../application/use-cases/update-permission.use-case';
 import {
   IAM_PERMISSIONS_CREATE_PERMISSION,
   IAM_PERMISSIONS_DELETE_PERMISSION,
@@ -61,11 +65,11 @@ export class AdminPermissionsController {
     @Inject(LIST_PERMISSIONS_USE_CASE)
     private readonly listPermissionsUseCase: ListPermissionsUseCase,
     @Inject(CREATE_PERMISSION_USE_CASE)
-    private readonly createPermissionUseCase: CreatePermissionUseCase,
+    private readonly createPermissionUseCase: AuditedCreatePermission,
     @Inject(UPDATE_PERMISSION_USE_CASE)
-    private readonly updatePermissionUseCase: UpdatePermissionUseCase,
+    private readonly updatePermissionUseCase: AuditedUpdatePermission,
     @Inject(DELETE_PERMISSION_USE_CASE)
-    private readonly deletePermissionUseCase: DeletePermissionUseCase,
+    private readonly deletePermissionUseCase: AuditedDeletePermission,
   ) {}
 
   @Get()
@@ -105,9 +109,13 @@ export class AdminPermissionsController {
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.permissions.create.')
   async createPermission(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Body() body: CreatePermissionBodyDto,
   ): Promise<HttpSuccessResponse<AdminPermissionResponseDto>> {
-    const result = await this.createPermissionUseCase.execute(body.name);
+    const result = await this.createPermissionUseCase.execute(
+      currentUser.userId,
+      body.name,
+    );
 
     if (!result.ok) {
       throw new ConflictException(result.error);
@@ -134,10 +142,11 @@ export class AdminPermissionsController {
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.permissions.update.')
   @ApiNotFoundErrorResponse('The requested permission was not found.')
   async updatePermission(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Param() params: AdminPermissionRouteParamsDto,
     @Body() body: UpdatePermissionBodyDto,
   ): Promise<HttpSuccessResponse<AdminPermissionResponseDto>> {
-    const result = await this.updatePermissionUseCase.execute({
+    const result = await this.updatePermissionUseCase.execute(currentUser.userId, {
       permissionId: params.permissionId,
       name: body.name,
     });
@@ -171,9 +180,11 @@ export class AdminPermissionsController {
   @ApiForbiddenErrorResponse('The authenticated user is missing iam.permissions.delete.')
   @ApiNotFoundErrorResponse('The requested permission was not found.')
   async deletePermission(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
     @Param() params: AdminPermissionRouteParamsDto,
   ): Promise<void> {
     const result = await this.deletePermissionUseCase.execute(
+      currentUser.userId,
       params.permissionId,
     );
 

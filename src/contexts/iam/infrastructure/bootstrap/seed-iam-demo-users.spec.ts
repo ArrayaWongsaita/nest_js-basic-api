@@ -33,6 +33,7 @@ function createAppConfig(): AppConfig {
       username: null,
       password: null,
     },
+    adminMaintenance: { allowInProduction: false },
   };
 }
 

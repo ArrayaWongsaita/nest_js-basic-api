@@ -1,15 +1,25 @@
 import { ConflictException } from '@nestjs/common';
 import { AdminDemoUserSeedsController } from './admin-demo-user-seeds.controller';
 
+const ADMIN_CONTEXT = {
+  userId: 'admin-1',
+  email: 'admin@example.com',
+  roles: ['admin'],
+  permissions: ['system.reset.any'],
+} as never;
+
 describe('AdminDemoUserSeedsController', () => {
   it('returns a success envelope with the demo-user seed summary', async () => {
     const seedDemoUsersUseCase = {
       execute: jest.fn().mockResolvedValue({
-        totalUsers: 60,
-        firstEmail: 'student1@mail.com',
-        lastEmail: 'student60@mail.com',
-        roleName: 'student',
-        completedAt: new Date('2026-05-26T08:30:00.000Z'),
+        ok: true,
+        value: {
+          totalUsers: 60,
+          firstEmail: 'student1@mail.com',
+          lastEmail: 'student60@mail.com',
+          roleName: 'student',
+          completedAt: new Date('2026-05-26T08:30:00.000Z'),
+        },
       }),
     };
 
@@ -17,7 +27,7 @@ describe('AdminDemoUserSeedsController', () => {
       seedDemoUsersUseCase as never,
     );
 
-    await expect(controller.createSeed()).resolves.toEqual({
+    await expect(controller.createSeed(ADMIN_CONTEXT)).resolves.toEqual({
       success: true,
       data: {
         totalUsers: 60,
@@ -40,8 +50,8 @@ describe('AdminDemoUserSeedsController', () => {
       seedDemoUsersUseCase as never,
     );
 
-    await expect(controller.createSeed()).rejects.toThrow(ConflictException);
-    await expect(controller.createSeed()).rejects.toThrow(
+    await expect(controller.createSeed(ADMIN_CONTEXT)).rejects.toThrow(ConflictException);
+    await expect(controller.createSeed(ADMIN_CONTEXT)).rejects.toThrow(
       'Database schema is behind the Prisma schema. Run "pnpm run prisma:db:push" and retry.',
     );
   });

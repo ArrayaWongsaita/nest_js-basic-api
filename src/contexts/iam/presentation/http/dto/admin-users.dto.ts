@@ -50,6 +50,10 @@ export const AdminUserSchema = z.object({
     description: 'Whether the user is preserved as a system record.',
     example: false,
   }),
+  deletedAt: z.string().datetime({ offset: true }).nullable().meta({
+    description: 'Timestamp when the user was soft-deleted, or null.',
+    example: null,
+  }),
   roles: z.array(AdminAssignedRoleSchema).meta({
     description: 'Roles currently assigned to the user.',
   }),
@@ -114,6 +118,14 @@ export const ListAdminUsersQuerySchema = z.object({
     description: 'Optional active-state filter.',
     example: true,
   }),
+  includeDeleted: AdminUserBooleanQuerySchema.optional().meta({
+    description: 'Include soft-deleted users in the list. Defaults to false.',
+    example: false,
+  }),
+  roleName: z.string().trim().min(1).optional().meta({
+    description: 'Optional exact role name filter. Unknown roles yield an empty list.',
+    example: 'student',
+  }),
   page: z.coerce.number().int().positive().default(1).meta({
     description: '1-based page number.',
     example: 1,
@@ -167,6 +179,32 @@ export const UpdateAdminUserStatusBodySchema = z.object({
 
 export class UpdateAdminUserStatusBodyDto extends createZodDto(
   UpdateAdminUserStatusBodySchema,
+) {}
+
+export const AdminUserPasswordResetSchema = z.object({
+  userId: z.string().uuid().meta({
+    description: 'Unique identifier of the user whose password was reset.',
+    example: '8f8da2a4-2dd1-4c3c-80cb-0cc371c43ec1',
+  }),
+  temporaryPassword: z.string().min(12).meta({
+    description:
+      'Temporary password. Shown only in this response; the user must replace it at next sign-in.',
+    example: 'k3Jf9x_Qw2Zr8vLmN4pT7yB1cD5eG6hA',
+  }),
+}).meta({ id: 'AdminUserPasswordReset' });
+
+export class AdminUserPasswordResetResponseDto extends createZodDto(
+  AdminUserPasswordResetSchema,
+) {}
+
+export const AdminUserPasswordResetHttpResponseSchema =
+  buildSuccessResponseSchema({
+    id: 'AdminUserPasswordResetHttpResponse',
+    dataSchema: AdminUserPasswordResetSchema,
+  });
+
+export class AdminUserPasswordResetHttpResponseDto extends createZodDto(
+  AdminUserPasswordResetHttpResponseSchema,
 ) {}
 
 export const AdminUserRouteParamsSchema = z.object({

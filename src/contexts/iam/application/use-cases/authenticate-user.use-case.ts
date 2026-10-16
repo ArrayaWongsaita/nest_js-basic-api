@@ -31,7 +31,7 @@ export class AuthenticateUserUseCase
   ): Promise<Result<AuthenticatedUserResult, string>> {
     const user = await this.userAccessReader.findByEmail(command.email);
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return Result.failure('Invalid email or password.');
     }
 
@@ -54,6 +54,7 @@ export class AuthenticateUserUseCase
   private async createAuthenticatedSession(user: {
     userId: string;
     email: string;
+    mustChangePassword: boolean;
     roles: string[];
     permissions: string[];
   }): Promise<AuthenticatedUserResult> {
@@ -68,6 +69,7 @@ export class AuthenticateUserUseCase
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      mustChangePassword: user.mustChangePassword,
     });
     const session = AuthSession.issue({
       userId: user.userId,
@@ -85,6 +87,7 @@ export class AuthenticateUserUseCase
         accessToken: accessToken.token,
         tokenType: DEFAULT_ACCESS_TOKEN_TYPE,
         expiresInSeconds: accessToken.expiresInSeconds,
+        mustChangePassword: user.mustChangePassword,
         user: {
           userId: user.userId,
           email: user.email,
