@@ -60,7 +60,7 @@ export class AuditedAction<TRequest, TResult extends Result<unknown, string>> {
     try {
       const descriptor = this.describe(
         request,
-        Result.failure('Unexpected error.') as TResult,
+        Result.failure('Unexpected error.') as unknown as TResult,
       );
 
       await this.audit.record({
