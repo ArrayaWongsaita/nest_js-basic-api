@@ -133,10 +133,35 @@ export class PrismaIamAdminGateway
     return mapAdminUserView(user);
   }
 
+  async softDeleteUser(userId: string): Promise<AdminUserView | null> {
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { deletedAt: new Date() },
+        include: adminUserInclude,
+      })
+      .catch(() => null);
+
+    return mapAdminUserView(user);
+  }
+
+  async restoreUser(userId: string): Promise<AdminUserView | null> {
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { deletedAt: null },
+        include: adminUserInclude,
+      })
+      .catch(() => null);
+
+    return mapAdminUserView(user);
+  }
+
   async countActiveAdmins(): Promise<number> {
     return this.prisma.user.count({
       where: {
         isActive: true,
+        deletedAt: null,
         roles: { some: { role: { name: ADMIN_ROLE_NAME } } },
       },
     });
@@ -362,6 +387,7 @@ function createAdminUserWhereClause(filters: AdminUserListFilters) {
   const trimmedSearch = filters.search?.trim();
 
   return {
+    ...(filters.includeDeleted ? {} : { deletedAt: null }),
     ...(trimmedSearch
       ? {
           OR: [
@@ -397,6 +423,7 @@ function mapAdminUserView(
     email: string;
     isActive: boolean;
     isSystem: boolean;
+    deletedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     roles: Array<{
@@ -417,6 +444,7 @@ function mapAdminUserView(
     email: user.email,
     isActive: user.isActive,
     isSystem: user.isSystem,
+    deletedAt: user.deletedAt,
     roles: user.roles.map(mapAssignedRoleView),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

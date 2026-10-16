@@ -31,7 +31,7 @@ export class AuthenticateUserUseCase
   ): Promise<Result<AuthenticatedUserResult, string>> {
     const user = await this.userAccessReader.findByEmail(command.email);
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return Result.failure('Invalid email or password.');
     }
 

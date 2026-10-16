@@ -39,7 +39,7 @@ export class RefreshAuthSessionUseCase
 
     const user = await this.userAccessReader.findById(session.userId);
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return Result.failure('Refresh session is invalid or expired.');
     }
 

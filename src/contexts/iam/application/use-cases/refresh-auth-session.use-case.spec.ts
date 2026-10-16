@@ -95,6 +95,7 @@ describe('RefreshAuthSessionUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -133,6 +134,7 @@ describe('RefreshAuthSessionUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -149,5 +151,41 @@ describe('RefreshAuthSessionUseCase', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toBe('Refresh session is invalid or expired.');
+  });
+
+  it('rejects a refresh for a soft-deleted user', async () => {
+    const session = AuthSession.issue({
+      userId: 'user-1',
+      refreshTokenHash: 'hashed:refresh-token',
+      expiresAt: new Date('2026-06-01T10:00:00.000Z'),
+      issuedAt: new Date('2026-05-20T10:00:00.000Z'),
+    });
+    const repository = new InMemoryAuthSessionRepository(session);
+    const useCase = new RefreshAuthSessionUseCase(
+      repository,
+      new InMemoryUserAccessReader({
+        userId: 'user-1',
+        email: 'architect@example.com',
+        passwordHash: 'hashed:strong-password-123',
+        isActive: true,
+        isSystem: false,
+        isDeleted: true,
+        roles: ['student'],
+        permissions: ['todo.create_own'],
+      }),
+      new StubAccessTokenIssuer(),
+      new StubOpaqueTokenGenerator(),
+      new StubOpaqueTokenHasher(),
+      new FixedClock(new Date('2026-05-25T10:00:00.000Z')),
+      60 * 60 * 24 * 30,
+    );
+
+    const result = await useCase.execute(
+      new RefreshAuthSessionCommand('refresh-token'),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Refresh session is invalid or expired.');
+    expect(repository.savedSession).toBeNull();
   });
 });

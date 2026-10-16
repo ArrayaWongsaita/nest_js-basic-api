@@ -35,6 +35,8 @@ import {
   SEED_DEMO_USERS_USE_CASE,
   UPDATE_ADMIN_USER_ROLES_USE_CASE,
   UPDATE_ADMIN_USER_STATUS_USE_CASE,
+  DELETE_ADMIN_USER_USE_CASE,
+  RESTORE_ADMIN_USER_USE_CASE,
   UPDATE_PERMISSION_USE_CASE,
   UPDATE_ROLE_USE_CASE,
   USER_ACCESS_READER,
@@ -52,6 +54,8 @@ import {
   describeRoleUpdate,
   describeUserRolesChange,
   describeUserStatusChange,
+  describeUserDeletion,
+  describeUserRestoration,
 } from './application/audit/admin-audit-descriptors';
 import type { AuditLogPort } from './application/ports/audit-log.port';
 import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entries.use-case';
@@ -75,6 +79,8 @@ import { RegisterUserUseCase } from './application/use-cases/register-user.use-c
 import { ResetAdminDataUseCase } from './application/use-cases/reset-admin-data.use-case';
 import { SeedDemoUsersUseCase } from './application/use-cases/seed-demo-users.use-case';
 import { UpdateAdminUserRolesUseCase } from './application/use-cases/update-admin-user-roles.use-case';
+import { DeleteAdminUserUseCase } from './application/use-cases/delete-admin-user.use-case';
+import { RestoreAdminUserUseCase } from './application/use-cases/restore-admin-user.use-case';
 import { UpdateAdminUserStatusUseCase } from './application/use-cases/update-admin-user-status.use-case';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.use-case';
 import { UpdateRoleUseCase } from './application/use-cases/update-role.use-case';
@@ -330,6 +336,32 @@ function toAdminMaintenancePolicy(
           new UpdateAdminUserStatusUseCase(adminUserManagement),
           auditLog,
           describeUserStatusChange,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: DELETE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeleteAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserDeletion,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: RESTORE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new RestoreAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserRestoration,
         ),
       inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
     },

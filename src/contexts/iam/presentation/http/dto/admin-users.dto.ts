@@ -50,6 +50,10 @@ export const AdminUserSchema = z.object({
     description: 'Whether the user is preserved as a system record.',
     example: false,
   }),
+  deletedAt: z.string().datetime({ offset: true }).nullable().meta({
+    description: 'Timestamp when the user was soft-deleted, or null.',
+    example: null,
+  }),
   roles: z.array(AdminAssignedRoleSchema).meta({
     description: 'Roles currently assigned to the user.',
   }),
@@ -113,6 +117,10 @@ export const ListAdminUsersQuerySchema = z.object({
   isActive: AdminUserBooleanQuerySchema.optional().meta({
     description: 'Optional active-state filter.',
     example: true,
+  }),
+  includeDeleted: AdminUserBooleanQuerySchema.optional().meta({
+    description: 'Include soft-deleted users in the list. Defaults to false.',
+    example: false,
   }),
   roleName: z.string().trim().min(1).optional().meta({
     description: 'Optional exact role name filter. Unknown roles yield an empty list.',
