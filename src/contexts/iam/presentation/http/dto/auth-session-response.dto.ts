@@ -20,6 +20,11 @@ export const AuthSessionResponseSchema = z
       description: 'Lifetime of the access token in seconds.',
       example: 900,
     }),
+    mustChangePassword: z.boolean().meta({
+      description:
+        'When true the access token may only be used to change the password (POST /auth/change-password).',
+      example: false,
+    }),
     user: CurrentUserSchema.meta({
       description:
         'Authenticated user profile snapshot embedded into the current session response.',

@@ -11,6 +11,7 @@ export class AuthPresenter {
       accessToken: result.accessToken,
       tokenType: result.tokenType,
       expiresInSeconds: result.expiresInSeconds,
+      mustChangePassword: result.mustChangePassword,
       user: {
         userId: result.user.userId,
         email: result.user.email,

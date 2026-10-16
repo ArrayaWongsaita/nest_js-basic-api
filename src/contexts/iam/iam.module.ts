@@ -11,6 +11,9 @@ import {
   LIST_AUDIT_ENTRIES_USE_CASE,
   AUTHENTICATE_USER_USE_CASE,
   AUTH_SESSION_REPOSITORY,
+  CHANGE_OWN_PASSWORD_USE_CASE,
+  RESET_ADMIN_USER_PASSWORD_USE_CASE,
+  USER_CREDENTIALS,
   CREATE_ADMIN_USER_USE_CASE,
   CREATE_PERMISSION_USE_CASE,
   CREATE_ROLE_USE_CASE,
@@ -52,6 +55,7 @@ import {
   describeRoleCreation,
   describeRoleDeletion,
   describeRoleUpdate,
+  describeUserPasswordReset,
   describeUserRolesChange,
   describeUserStatusChange,
   describeUserDeletion,
@@ -65,6 +69,14 @@ import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entr
 import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
 import { AdminAuditLogsController } from './presentation/http/controllers/admin-audit-logs.controller';
 import { AdminMaintenancePolicy } from './application/ports/admin-maintenance-policy.port';
+import { ChangeOwnPasswordUseCase } from './application/use-cases/change-own-password.use-case';
+import { ResetAdminUserPasswordUseCase } from './application/use-cases/reset-admin-user-password.use-case';
+import type { UserCredentialsPort } from './application/ports/user-credentials.port';
+import type { PasswordHasher } from './application/ports/password-hasher.port';
+import type { OpaqueTokenGenerator } from './application/ports/opaque-token-generator.port';
+import type { AuthSessionRepository } from './domain/repositories/auth-session.repository';
+import type { UserAccessReader } from './application/ports/user-access-reader.port';
+import { PrismaUserCredentialsGateway } from './infrastructure/persistence/prisma/prisma-user-credentials.gateway';
 import { AuthenticateUserUseCase } from './application/use-cases/authenticate-user.use-case';
 import { CreateAdminUserUseCase } from './application/use-cases/create-admin-user.use-case';
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.use-case';
@@ -162,6 +174,10 @@ function toAdminMaintenancePolicy(
     {
       provide: DEMO_USER_SEEDER,
       useClass: PrismaDemoUserSeedGateway,
+    },
+    {
+      provide: USER_CREDENTIALS,
+      useClass: PrismaUserCredentialsGateway,
     },
     {
       provide: USER_ACCESS_READER,
@@ -347,6 +363,57 @@ function toAdminMaintenancePolicy(
           describeUserStatusChange,
         ),
       inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: RESET_ADMIN_USER_PASSWORD_USE_CASE,
+      useFactory: (
+        adminUserManagement: AdminUserManagementPort,
+        credentials: UserCredentialsPort,
+        passwordHasher: PasswordHasher,
+        tokenGenerator: OpaqueTokenGenerator,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new ResetAdminUserPasswordUseCase(
+            adminUserManagement,
+            credentials,
+            passwordHasher,
+            tokenGenerator,
+          ),
+          auditLog,
+          describeUserPasswordReset,
+        ),
+      inject: [
+        ADMIN_USER_MANAGEMENT,
+        USER_CREDENTIALS,
+        PASSWORD_HASHER,
+        OPAQUE_TOKEN_GENERATOR,
+        AUDIT_LOG,
+      ],
+    },
+    {
+      provide: CHANGE_OWN_PASSWORD_USE_CASE,
+      useFactory: (
+        userAccessReader: UserAccessReader,
+        credentials: UserCredentialsPort,
+        passwordHasher: PasswordHasher,
+        passwordPolicy: PasswordPolicyService,
+        authSessionRepository: AuthSessionRepository,
+      ) =>
+        new ChangeOwnPasswordUseCase(
+          userAccessReader,
+          credentials,
+          passwordHasher,
+          passwordPolicy,
+          authSessionRepository,
+        ),
+      inject: [
+        USER_ACCESS_READER,
+        USER_CREDENTIALS,
+        PASSWORD_HASHER,
+        PASSWORD_POLICY,
+        AUTH_SESSION_REPOSITORY,
+      ],
     },
     {
       provide: DELETE_ADMIN_USER_USE_CASE,

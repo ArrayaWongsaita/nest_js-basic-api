@@ -16,6 +16,7 @@ export class JwtAccessTokenIssuer implements AccessTokenIssuer {
     email: string;
     roles: string[];
     permissions: string[];
+    mustChangePassword?: boolean;
   }): Promise<IssuedAccessToken> {
     const issuedAt = Math.floor(Date.now() / 1000);
     const claims: AccessTokenClaims = {
@@ -23,6 +24,7 @@ export class JwtAccessTokenIssuer implements AccessTokenIssuer {
       email: payload.email,
       roles: payload.roles,
       permissions: payload.permissions,
+      ...(payload.mustChangePassword ? { mustChangePassword: true } : {}),
       iat: issuedAt,
       exp: issuedAt + this.expiresInSeconds,
     };

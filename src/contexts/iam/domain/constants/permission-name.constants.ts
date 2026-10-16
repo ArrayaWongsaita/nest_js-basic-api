@@ -2,6 +2,7 @@ export const IAM_USERS_CREATE_PERMISSION = 'iam.users.create';
 export const IAM_USERS_READ_PERMISSION = 'iam.users.read';
 export const IAM_USERS_UPDATE_ROLES_PERMISSION = 'iam.users.update_roles';
 export const IAM_USERS_DEACTIVATE_PERMISSION = 'iam.users.deactivate';
+export const IAM_USERS_RESET_PASSWORD_PERMISSION = 'iam.users.reset_password';
 export const IAM_USERS_DELETE_PERMISSION = 'iam.users.delete';
 export const IAM_USERS_RESTORE_PERMISSION = 'iam.users.restore';
 export const IAM_ROLES_READ_PERMISSION = 'iam.roles.read';
@@ -46,6 +47,7 @@ export const DEFAULT_PERMISSION_NAMES = [
   IAM_USERS_READ_PERMISSION,
   IAM_USERS_UPDATE_ROLES_PERMISSION,
   IAM_USERS_DEACTIVATE_PERMISSION,
+  IAM_USERS_RESET_PASSWORD_PERMISSION,
   IAM_USERS_DELETE_PERMISSION,
   IAM_USERS_RESTORE_PERMISSION,
   IAM_ROLES_READ_PERMISSION,
