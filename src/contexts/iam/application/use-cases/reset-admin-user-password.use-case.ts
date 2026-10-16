@@ -31,7 +31,7 @@ export class ResetAdminUserPasswordUseCase implements UseCase<
   ): Promise<Result<ResetAdminUserPasswordResult, string>> {
     const user = await this.adminUserManagement.findById(request.userId);
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       return Result.failure('User was not found.');
     }
 

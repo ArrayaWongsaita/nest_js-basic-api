@@ -57,6 +57,7 @@ export class AdminDataResetsController {
     @Body() body: CreateAdminDataResetBodyDto,
   ): Promise<HttpSuccessResponse<AdminDataResetResponseDto>> {
     const result = await this.resetAdminDataUseCase.execute(currentUser.userId, {
+      actorUserId: currentUser.userId,
       scope: body.scope,
       targetUserId: body.targetUserId ?? null,
       domains: body.domains,
