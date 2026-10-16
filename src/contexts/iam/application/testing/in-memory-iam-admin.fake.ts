@@ -122,8 +122,18 @@ export class InMemoryIamAdmin
     );
   }
 
-  clearAuthSessionsForUser(): Promise<number> {
-    return Promise.resolve(0);
+  private readonly sessionUserIds = new Set<string>();
+
+  seedSession(userId: string): void {
+    this.sessionUserIds.add(userId);
+  }
+
+  hasSession(userId: string): boolean {
+    return this.sessionUserIds.has(userId);
+  }
+
+  clearAuthSessionsForUser(userId: string): Promise<number> {
+    return Promise.resolve(this.sessionUserIds.delete(userId) ? 1 : 0);
   }
 
   clearAllAuthSessions(): Promise<number> {
