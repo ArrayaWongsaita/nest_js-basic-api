@@ -15,11 +15,10 @@ import { ListUserExpensesUseCase } from './application/use-cases/list-user-expen
 import { UpdateExpenseUseCase } from './application/use-cases/update-expense.use-case';
 import { PrismaExpenseRepository } from './infrastructure/persistence/prisma/prisma-expense.repository';
 import { AuthenticatedExpensesController } from './presentation/http/controllers/authenticated-expenses.controller';
-import { UserExpensesController } from './presentation/http/controllers/user-expenses.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedExpensesController, UserExpensesController],
+  controllers: [AuthenticatedExpensesController],
   providers: [
     {
       provide: EXPENSE_REPOSITORY,
