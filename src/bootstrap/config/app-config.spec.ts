@@ -49,7 +49,7 @@ describe('loadAppConfig', () => {
       },
       auth: {
         accessTokenSecret: 'test-access-secret',
-        accessTokenTtlSeconds: 900,
+        accessTokenTtlSeconds: 600,
         refreshCookieName: 'refresh_token',
         refreshTokenTtlSeconds: 2592000,
         bootstrapAdmin: null,
@@ -72,8 +72,23 @@ describe('loadAppConfig', () => {
     expect(config.database.caCertificate).toBeNull();
     expect(config.swagger.enabled).toBe(false);
     expect(config.auth.refreshCookieName).toBe('refresh_token');
-    expect(config.auth.accessTokenTtlSeconds).toBe(900);
+    expect(config.auth.accessTokenTtlSeconds).toBe(600);
   });
+
+  it('allows lowering the access token lifetime through JWT_ACCESS_TTL', () => {
+    const config = loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: '5m' });
+
+    expect(config.auth.accessTokenTtlSeconds).toBe(300);
+  });
+
+  it.each(['16m', '1h', '0s', 'abc'])(
+    'rejects JWT_ACCESS_TTL=%s at startup',
+    (ttl) => {
+      expect(() =>
+        loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: ttl }),
+      ).toThrow('Invalid environment configuration');
+    },
+  );
 
   it('throws a readable error when required env values are missing', () => {
     expect(() => loadAppConfig({})).toThrow(
@@ -273,7 +288,7 @@ describe('loadRuntimeAppConfig', () => {
       },
       auth: {
         accessTokenSecret: 'from-env-secret',
-        accessTokenTtlSeconds: 900,
+        accessTokenTtlSeconds: 600,
         refreshCookieName: 'refresh_token',
         refreshTokenTtlSeconds: 2592000,
         bootstrapAdmin: null,

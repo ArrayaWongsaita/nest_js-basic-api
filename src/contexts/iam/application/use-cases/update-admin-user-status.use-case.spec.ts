@@ -109,3 +109,38 @@ describe('UpdateAdminUserStatusUseCase admin safety rules', () => {
     expect(result.error).toBe('System users cannot be deactivated.');
   });
 });
+
+describe('UpdateAdminUserStatusUseCase session revocation', () => {
+  it('removes the session of a deactivated user', async () => {
+    const { admin, useCase } = setup([
+      { userId: 'a1', roleNames: ['admin'] },
+      { userId: 's1', roleNames: ['student'] },
+    ]);
+    admin.seedSession('s1');
+
+    await useCase.execute({ actorUserId: 'a1', userId: 's1', isActive: false });
+
+    expect(admin.hasSession('s1')).toBe(false);
+  });
+
+  it('keeps the session when the deactivation is rejected', async () => {
+    const { admin, useCase } = setup([{ userId: 'a1', roleNames: ['admin'] }]);
+    admin.seedSession('a1');
+
+    await useCase.execute({ actorUserId: 'a1', userId: 'a1', isActive: false });
+
+    expect(admin.hasSession('a1')).toBe(true);
+  });
+
+  it('keeps the session of a user who stays active', async () => {
+    const { admin, useCase } = setup([
+      { userId: 'a1', roleNames: ['admin'] },
+      { userId: 's1', roleNames: ['student'] },
+    ]);
+    admin.seedSession('s1');
+
+    await useCase.execute({ actorUserId: 'a1', userId: 's1', isActive: true });
+
+    expect(admin.hasSession('s1')).toBe(true);
+  });
+});

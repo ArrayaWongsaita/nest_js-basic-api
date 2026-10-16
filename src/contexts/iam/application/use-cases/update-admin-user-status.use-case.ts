@@ -55,6 +55,10 @@ export class UpdateAdminUserStatusUseCase implements UseCase<
       return Result.failure('User was not found.');
     }
 
+    if (!request.isActive) {
+      await this.adminUserManagement.clearAuthSessionsForUser(request.userId);
+    }
+
     return Result.success(updatedUser);
   }
 }
