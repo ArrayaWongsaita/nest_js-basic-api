@@ -73,6 +73,7 @@ import {
   UpdateAdminUserRolesBodyDto,
   UpdateAdminUserStatusBodyDto,
 } from '../dto/admin-users.dto';
+import { USER_NOT_FOUND_MESSAGE } from '../../../../../shared/application/for-existing-user';
 import { AdminPresenter } from '../presenters/admin.presenter';
 
 @ApiTags('Admin Users')
@@ -217,7 +218,7 @@ export class AdminUsersController {
     });
 
     if (!result.ok) {
-      if (result.error === 'User was not found.') {
+      if (result.error === USER_NOT_FOUND_MESSAGE) {
         throw new NotFoundException(result.error);
       }
 
@@ -260,7 +261,7 @@ export class AdminUsersController {
     });
 
     if (!result.ok) {
-      if (result.error === 'User was not found.') {
+      if (result.error === USER_NOT_FOUND_MESSAGE) {
         throw new NotFoundException(result.error);
       }
 
@@ -300,7 +301,7 @@ export class AdminUsersController {
     );
 
     if (!result.ok) {
-      if (result.error === 'User was not found.') {
+      if (result.error === USER_NOT_FOUND_MESSAGE) {
         throw new NotFoundException(result.error);
       }
 
@@ -338,7 +339,7 @@ export class AdminUsersController {
     );
 
     if (!result.ok) {
-      if (result.error === 'User was not found.') {
+      if (result.error === USER_NOT_FOUND_MESSAGE) {
         throw new NotFoundException(result.error);
       }
 

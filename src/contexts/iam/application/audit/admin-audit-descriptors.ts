@@ -213,7 +213,7 @@ export function describeDataReset(
       scope: request.scope,
       domains: [...request.domains],
       mode: request.mode,
-      reason: request.reason ?? null,
+      hasReason: Boolean(request.reason?.trim()),
     },
   };
 }

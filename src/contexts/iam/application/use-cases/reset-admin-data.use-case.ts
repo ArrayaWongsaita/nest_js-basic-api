@@ -1,3 +1,4 @@
+import { ADMIN_ROLE_NAME } from '../../domain/constants/role-name.constants';
 import { Result } from '../../../../shared/application/result';
 import { UseCase } from '../../../../shared/application/use-case';
 import { AdminDataResetResult } from '../dto/admin-data-reset.result';
@@ -13,6 +14,7 @@ import {
 import { RbacCatalogPort } from '../ports/rbac-catalog.port';
 
 export interface ResetAdminDataRequest {
+  readonly actorUserId: string;
   readonly scope: AdminResetScope;
   readonly targetUserId: string | null;
   readonly domains: readonly string[];
@@ -68,6 +70,14 @@ export class ResetAdminDataUseCase implements UseCase<
       }
     }
 
+    if (resolvedDomains.value.includes('iam')) {
+      const guard = await this.checkAdminSafety(request);
+
+      if (guard) {
+        return Result.failure(guard);
+      }
+    }
+
     const domainResults = [];
 
     for (const domainName of resolvedDomains.value) {
@@ -108,6 +118,41 @@ export class ResetAdminDataUseCase implements UseCase<
       },
       completedAt: new Date(),
     });
+  }
+
+  /** The IAM reset deletes users: keep the acting admin and the last active admin. */
+  private async checkAdminSafety(
+    request: ResetAdminDataRequest,
+  ): Promise<string | null> {
+    if (request.scope === 'user' && request.targetUserId) {
+      if (request.targetUserId === request.actorUserId) {
+        return 'Admins cannot reset their own account.';
+      }
+
+      const target = await this.adminUserManagement.findById(
+        request.targetUserId,
+      );
+
+      if (
+        target &&
+        target.isActive &&
+        !target.deletedAt &&
+        target.roles.some((role) => role.name === ADMIN_ROLE_NAME) &&
+        (await this.adminUserManagement.countActiveAdmins()) <= 1
+      ) {
+        return 'The last active admin cannot be reset.';
+      }
+
+      return null;
+    }
+
+    const actor = await this.adminUserManagement.findById(request.actorUserId);
+
+    if (!actor?.isSystem) {
+      return 'A global IAM reset deletes all non-system users, including the acting admin; run it as a system admin.';
+    }
+
+    return null;
   }
 }
 

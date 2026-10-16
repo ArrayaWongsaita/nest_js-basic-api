@@ -67,4 +67,29 @@ describe('AuditedAction', () => {
 
     expect(JSON.stringify(audit.entries)).not.toContain('secret');
   });
+
+  it('records a rejected entry and rethrows when the inner use case throws', async () => {
+    const audit = new InMemoryAuditLog();
+    const action = new AuditedAction<Req, Result<string, string>>(
+      { execute: () => Promise.reject(new Error('db down')) },
+      audit,
+      (request) => ({
+        action: 'user.status_changed',
+        targetType: 'user',
+        targetId: request.userId,
+      }),
+    );
+
+    await expect(
+      action.execute('admin-1', { userId: 'u1', password: 'secret' }),
+    ).rejects.toThrow('db down');
+
+    expect(audit.entries).toHaveLength(1);
+    expect(audit.entries[0]).toMatchObject({
+      actorUserId: 'admin-1',
+      outcome: 'rejected',
+      targetId: 'u1',
+    });
+    expect(JSON.stringify(audit.entries)).not.toContain('secret');
+  });
 });

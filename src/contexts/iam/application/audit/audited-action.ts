@@ -27,7 +27,15 @@ export class AuditedAction<TRequest, TResult extends Result<unknown, string>> {
   ) {}
 
   async execute(actorUserId: string, request: TRequest): Promise<TResult> {
-    const result = await this.inner.execute(request);
+    let result: TResult;
+
+    try {
+      result = await this.inner.execute(request);
+    } catch (error) {
+      await this.recordThrown(actorUserId, request);
+      throw error;
+    }
+
     const descriptor = this.describe(request, result);
 
     await this.audit.record({
@@ -42,5 +50,29 @@ export class AuditedAction<TRequest, TResult extends Result<unknown, string>> {
     });
 
     return result;
+  }
+
+  /** The result (and so the descriptor's result-dependent fields) is unknown. */
+  private async recordThrown(
+    actorUserId: string,
+    request: TRequest,
+  ): Promise<void> {
+    try {
+      const descriptor = this.describe(
+        request,
+        Result.failure('Unexpected error.') as TResult,
+      );
+
+      await this.audit.record({
+        actorUserId,
+        action: descriptor.action,
+        targetType: descriptor.targetType,
+        targetId: descriptor.targetId,
+        outcome: 'rejected',
+        details: { ...descriptor.details, reason: 'Unexpected error.' },
+      });
+    } catch {
+      // Never mask the original error with an audit failure.
+    }
   }
 }

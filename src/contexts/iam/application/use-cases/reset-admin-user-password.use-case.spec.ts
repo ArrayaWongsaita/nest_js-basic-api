@@ -16,9 +16,11 @@ function setup() {
   const admin = new InMemoryIamAdmin([
     { userId: 'admin-1', roleNames: ['admin'] },
     { userId: 'student-1' },
+    { userId: 'deleted-1', isDeleted: true },
   ]);
   const store = new InMemoryCredentialStore([
     { userId: 'student-1', passwordHash: 'hashed:old-password-123' },
+    { userId: 'deleted-1', passwordHash: 'hashed:old-password-123' },
   ]);
   const useCase = new ResetAdminUserPasswordUseCase(
     admin,
@@ -63,5 +65,20 @@ describe('ResetAdminUserPasswordUseCase', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toBe('User was not found.');
+  });
+
+  it('fails for a soft-deleted user and leaves the password untouched', async () => {
+    const { store, useCase } = setup();
+
+    const result = await useCase.execute({
+      actorUserId: 'admin-1',
+      userId: 'deleted-1',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('User was not found.');
+    expect((await store.findById('deleted-1'))?.passwordHash).toBe(
+      'hashed:old-password-123',
+    );
   });
 });
