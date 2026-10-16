@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  BadRequestException,
   Get,
   Headers,
   HttpCode,
@@ -38,6 +39,7 @@ import {
 } from '../../../../../shared/presentation/http/response/http-response-envelope';
 import {
   AUTHENTICATE_USER_USE_CASE,
+  CHANGE_OWN_PASSWORD_USE_CASE,
   GET_CURRENT_USER_USE_CASE,
   LOGOUT_AUTH_SESSION_USE_CASE,
   REFRESH_AUTH_SESSION_USE_CASE,
@@ -46,6 +48,9 @@ import { AuthenticateUserCommand } from '../../../application/commands/authentic
 import { GetCurrentUserQuery } from '../../../application/queries/get-current-user.query';
 import { LogoutAuthSessionCommand } from '../../../application/commands/logout-auth-session.command';
 import { RefreshAuthSessionCommand } from '../../../application/commands/refresh-auth-session.command';
+import { ChangeOwnPasswordUseCase } from '../../../application/use-cases/change-own-password.use-case';
+import { AllowPasswordChange } from '../../../../../shared/presentation/http/auth/allow-password-change.decorator';
+import { ChangePasswordBodyDto } from '../dto/change-password-body.dto';
 import { AuthenticateUserUseCase } from '../../../application/use-cases/authenticate-user.use-case';
 import { GetCurrentUserUseCase } from '../../../application/use-cases/get-current-user.use-case';
 import { LogoutAuthSessionUseCase } from '../../../application/use-cases/logout-auth-session.use-case';
@@ -73,6 +78,8 @@ export class AuthController {
     private readonly logoutAuthSessionUseCase: LogoutAuthSessionUseCase,
     @Inject(GET_CURRENT_USER_USE_CASE)
     private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
+    @Inject(CHANGE_OWN_PASSWORD_USE_CASE)
+    private readonly changeOwnPasswordUseCase: ChangeOwnPasswordUseCase,
     @Inject(APP_CONFIG)
     private readonly appConfig: AppConfig,
   ) {}
@@ -209,5 +216,36 @@ export class AuthController {
     return createSuccessResponse(
       AuthPresenter.toCurrentUserResponse(result.value),
     );
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @AllowPasswordChange()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Change the current user password',
+    description:
+      'Changes the password of the authenticated user after verifying the current one. Also the only operation available to a session created with a temporary password. Ends the current refresh session; the user signs in again with the new password.',
+  })
+  @ApiNoContentResponse({
+    description: 'The password was changed successfully.',
+  })
+  @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
+  async changePassword(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+    @Body() body: ChangePasswordBodyDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    const result = await this.changeOwnPasswordUseCase.execute({
+      userId: currentUser.userId,
+      currentPassword: body.currentPassword,
+      newPassword: body.newPassword,
+    });
+
+    if (!result.ok) {
+      throw new BadRequestException(result.error);
+    }
+
+    clearRefreshTokenCookie(response, this.appConfig);
   }
 }

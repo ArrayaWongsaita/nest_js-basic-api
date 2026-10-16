@@ -12,6 +12,7 @@ import {
 } from '../../../../contexts/iam/application/tokens';
 import type { AccessTokenIssuer } from '../../../../contexts/iam/application/ports/access-token-issuer.port';
 import { AuthenticatedRequest } from './authenticated-request';
+import { ALLOW_PASSWORD_CHANGE_KEY } from './allow-password-change.decorator';
 import { PUBLIC_ROUTE_KEY } from './public.decorator';
 import { REQUIRED_PERMISSIONS_KEY } from './require-permissions.decorator';
 
@@ -42,6 +43,20 @@ export class AccessTokenAuthGuard implements CanActivate {
 
     try {
       const claims = await this.accessTokenIssuer.verify(bearerToken);
+      if (claims.mustChangePassword) {
+        const allowsPasswordChange =
+          this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_CHANGE_KEY, [
+            context.getHandler(),
+            context.getClass(),
+          ]);
+
+        if (!allowsPasswordChange) {
+          throw new ForbiddenException(
+            'You must change your password before using this resource.',
+          );
+        }
+      }
+
       const requiredPermissions =
         this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS_KEY, [
           context.getHandler(),
