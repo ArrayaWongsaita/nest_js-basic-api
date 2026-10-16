@@ -2,6 +2,8 @@
 
 NestJS monolith starter that follows clean architecture with bounded contexts.
 
+Full endpoint documentation (auth, admin management, audit logs, maintenance and the six data domains): [docs/api-reference.md](docs/api-reference.md).
+
 ## Required Environment
 
 The auth-enabled application will not boot unless the JWT secret is configured.
