@@ -15,11 +15,10 @@ import { ListUserBooksUseCase } from './application/use-cases/list-user-books.us
 import { UpdateBookUseCase } from './application/use-cases/update-book.use-case';
 import { PrismaBookRepository } from './infrastructure/persistence/prisma/prisma-book.repository';
 import { AuthenticatedBooksController } from './presentation/http/controllers/authenticated-books.controller';
-import { UserBooksController } from './presentation/http/controllers/user-books.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedBooksController, UserBooksController],
+  controllers: [AuthenticatedBooksController],
   providers: [
     {
       provide: BOOK_REPOSITORY,
