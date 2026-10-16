@@ -5,11 +5,14 @@ describe('AdminDemoUserSeedsController', () => {
   it('returns a success envelope with the demo-user seed summary', async () => {
     const seedDemoUsersUseCase = {
       execute: jest.fn().mockResolvedValue({
-        totalUsers: 60,
-        firstEmail: 'student1@mail.com',
-        lastEmail: 'student60@mail.com',
-        roleName: 'student',
-        completedAt: new Date('2026-05-26T08:30:00.000Z'),
+        ok: true,
+        value: {
+          totalUsers: 60,
+          firstEmail: 'student1@mail.com',
+          lastEmail: 'student60@mail.com',
+          roleName: 'student',
+          completedAt: new Date('2026-05-26T08:30:00.000Z'),
+        },
       }),
     };
 

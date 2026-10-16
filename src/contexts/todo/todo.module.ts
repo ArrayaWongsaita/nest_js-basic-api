@@ -15,11 +15,10 @@ import { ListUserTodosUseCase } from './application/use-cases/list-user-todos.us
 import { UpdateTodoUseCase } from './application/use-cases/update-todo.use-case';
 import { PrismaTodoRepository } from './infrastructure/persistence/prisma/prisma-todo.repository';
 import { AuthenticatedTodosController } from './presentation/http/controllers/authenticated-todos.controller';
-import { UserTodosController } from './presentation/http/controllers/user-todos.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedTodosController, UserTodosController],
+  controllers: [AuthenticatedTodosController],
   providers: [
     {
       provide: TODO_REPOSITORY,

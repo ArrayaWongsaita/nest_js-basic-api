@@ -379,6 +379,15 @@ function createAdminUserWhereClause(filters: AdminUserListFilters) {
       : {
           isActive: filters.isActive,
         }),
+    ...(filters.roleName
+      ? {
+          roles: {
+            some: {
+              role: { name: filters.roleName },
+            },
+          },
+        }
+      : {}),
   };
 }
 

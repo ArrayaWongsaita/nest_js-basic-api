@@ -24,6 +24,10 @@ const rawEnvSchema = z.object({
     .transform((value) => value === 'true'),
   SWAGGER_USERNAME: z.string().optional(),
   SWAGGER_PASSWORD: z.string().optional(),
+  ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type AppConfig = {
@@ -52,6 +56,9 @@ export type AppConfig = {
     enabled: boolean;
     username: string | null;
     password: string | null;
+  };
+  adminMaintenance: {
+    allowInProduction: boolean;
   };
 };
 
@@ -135,6 +142,9 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
       username: swaggerUsername,
       password: swaggerPassword,
     },
+    adminMaintenance: {
+      allowInProduction: env.ADMIN_MAINTENANCE_ALLOW_IN_PRODUCTION,
+    },
   };
 }
 
@@ -177,9 +187,7 @@ function stripWrappingQuotes(value: string): string {
   return value;
 }
 
-function parseDatabaseCaCertificate(
-  value: string | undefined,
-): string | null {
+function parseDatabaseCaCertificate(value: string | undefined): string | null {
   if (value === undefined) {
     return null;
   }

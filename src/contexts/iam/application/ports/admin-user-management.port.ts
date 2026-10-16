@@ -17,6 +17,7 @@ export interface AdminUserView {
 export interface AdminUserListFilters {
   readonly search?: string;
   readonly isActive?: boolean;
+  readonly roleName?: string;
 }
 
 export interface PaginatedAdminUsers {
