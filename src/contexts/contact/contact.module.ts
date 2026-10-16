@@ -15,11 +15,10 @@ import { ListUserContactsUseCase } from './application/use-cases/list-user-conta
 import { UpdateContactUseCase } from './application/use-cases/update-contact.use-case';
 import { PrismaContactRepository } from './infrastructure/persistence/prisma/prisma-contact.repository';
 import { AuthenticatedContactsController } from './presentation/http/controllers/authenticated-contacts.controller';
-import { UserContactsController } from './presentation/http/controllers/user-contacts.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedContactsController, UserContactsController],
+  controllers: [AuthenticatedContactsController],
   providers: [
     {
       provide: CONTACT_REPOSITORY,

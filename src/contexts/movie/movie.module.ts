@@ -15,11 +15,10 @@ import { ListUserMoviesUseCase } from './application/use-cases/list-user-movies.
 import { UpdateMovieUseCase } from './application/use-cases/update-movie.use-case';
 import { PrismaMovieRepository } from './infrastructure/persistence/prisma/prisma-movie.repository';
 import { AuthenticatedMoviesController } from './presentation/http/controllers/authenticated-movies.controller';
-import { UserMoviesController } from './presentation/http/controllers/user-movies.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedMoviesController, UserMoviesController],
+  controllers: [AuthenticatedMoviesController],
   providers: [
     {
       provide: MOVIE_REPOSITORY,

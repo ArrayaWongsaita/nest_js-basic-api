@@ -102,8 +102,12 @@ describe('Swagger docs and auth boundaries (e2e)', () => {
         expect(body.paths['/auth/me']).toBeDefined();
         expect(body.paths['/admin/users']).toBeUndefined();
         expect(body.paths['/todos']).toBeUndefined();
-        expect(body.components?.securitySchemes?.['access-token']).toBeDefined();
-        expect(body.components?.securitySchemes?.['refresh-token']).toBeDefined();
+        expect(
+          body.components?.securitySchemes?.['access-token'],
+        ).toBeDefined();
+        expect(
+          body.components?.securitySchemes?.['refresh-token'],
+        ).toBeDefined();
         expect(
           body.components?.schemas?.LoginBody?.properties?.email?.example,
         ).toBe('architect@example.com');
@@ -179,8 +183,8 @@ describe('Swagger docs and auth boundaries (e2e)', () => {
 
         expect(body.paths['/todos']).toBeDefined();
         expect(body.paths['/todos/{todoId}']).toBeDefined();
-        expect(body.paths['/users/{userId}/todos']).toBeDefined();
-        expect(body.paths['/users/{userId}/todos/{todoId}']).toBeDefined();
+        expect(body.paths['/users/{userId}/todos']).toBeUndefined();
+        expect(body.paths['/users/{userId}/todos/{todoId}']).toBeUndefined();
         expect(body.paths['/auth/login']).toBeDefined();
         expect(body.paths['/auth/me']).toBeDefined();
         expect(body.paths['/auth/refresh']).toBeUndefined();
@@ -248,45 +252,53 @@ describe('Swagger docs and auth boundaries (e2e)', () => {
         title: 'Write API docs',
       })
       .expect(401);
-    await request(app.getHttpServer())
-      .post('/users/not-a-uuid/todos')
-      .send({
-        title: 'Write API docs',
-      })
-      .expect(400)
-      .expect((response: Response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          statusCode: 400,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Validation failed.',
-          },
-          path: '/users/not-a-uuid/todos',
-        });
-        expect(response.body.error.details).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              path: 'userId',
-              code: expect.any(String),
-              message: expect.any(String),
-            }),
-          ]),
-        );
-      });
-    await request(app.getHttpServer())
-      .get(`/users/${TEST_USER_ID}/todos?isCompleted=maybe`)
-      .expect(400);
-    await request(app.getHttpServer())
-      .get(`/users/${TEST_USER_ID}/todos?page=0`)
-      .expect(400);
-    await request(app.getHttpServer())
-      .get(`/users/${TEST_USER_ID}/todos?limit=101`)
-      .expect(400);
-    await request(app.getHttpServer())
-      .patch('/users/not-a-uuid/todos/not-a-uuid')
-      .send({})
-      .expect(400);
+  });
+});
+
+describe('Removed per-user data routes (e2e)', () => {
+  let app: INestApplication;
+  const itemId = '1b7d4f4e-6a3a-4c53-8f1e-2f4e9a0c9d11';
+  const collections = [
+    'todos',
+    'notes',
+    'contacts',
+    'books',
+    'movies',
+    'transactions',
+  ];
+
+  beforeEach(async () => {
+    app = await createHttpApp(loadAppConfig(createBaseEnv()));
+    await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  describe.each(collections)('%s', (collection) => {
+    it('responds not found for every former per-user route', async () => {
+      const server = app.getHttpServer();
+      const base = `/users/${TEST_USER_ID}/${collection}`;
+      const item = `${base}/${itemId}`;
+
+      await request(server).get(base).expect(404);
+      await request(server).post(base).send({}).expect(404);
+      await request(server).get(item).expect(404);
+      await request(server).patch(item).send({}).expect(404);
+      await request(server).delete(item).expect(404);
+    });
+
+    it('keeps the authenticated routes behind a token', async () => {
+      const server = app.getHttpServer();
+      const base = `/${collection}`;
+
+      await request(server).get(base).expect(401);
+      await request(server).post(base).send({}).expect(401);
+      await request(server).get(`${base}/${itemId}`).expect(401);
+      await request(server).patch(`${base}/${itemId}`).send({}).expect(401);
+      await request(server).delete(`${base}/${itemId}`).expect(401);
+    });
   });
 });
 
@@ -307,8 +319,6 @@ describe('Swagger disabled (e2e)', () => {
   });
 
   it('does not mount swagger routes when disabled', () => {
-    return request(app.getHttpServer())
-      .get('/docs/iam')
-      .expect(404);
+    return request(app.getHttpServer()).get('/docs/iam').expect(404);
   });
 });

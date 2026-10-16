@@ -15,11 +15,10 @@ import { ListUserNotesUseCase } from './application/use-cases/list-user-notes.us
 import { UpdateNoteUseCase } from './application/use-cases/update-note.use-case';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma/prisma-note.repository';
 import { AuthenticatedNotesController } from './presentation/http/controllers/authenticated-notes.controller';
-import { UserNotesController } from './presentation/http/controllers/user-notes.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [AuthenticatedNotesController, UserNotesController],
+  controllers: [AuthenticatedNotesController],
   providers: [
     {
       provide: NOTE_REPOSITORY,

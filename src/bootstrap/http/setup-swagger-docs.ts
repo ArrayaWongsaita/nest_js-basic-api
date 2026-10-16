@@ -30,12 +30,7 @@ const swaggerDocuments: readonly SwaggerDocumentDefinition[] = [
     description: 'Identity and access management HTTP API.',
     path: 'docs/iam',
     modules: [IamModule],
-    allowedPaths: [
-      '/auth/login',
-      '/auth/refresh',
-      '/auth/logout',
-      '/auth/me',
-    ],
+    allowedPaths: ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/me'],
   },
   {
     title: 'Admin API',
@@ -57,38 +52,22 @@ const swaggerDocuments: readonly SwaggerDocumentDefinition[] = [
   },
   {
     title: 'Todo API',
-    description:
-      'Todo HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+    description: 'Todo HTTP API with authenticated routes and login helpers.',
     path: 'docs/todo',
     modules: [TodoModule, IamModule],
-    allowedPaths: [
-      '/auth/login',
-      '/auth/me',
-      '/todos',
-      '/todos/{todoId}',
-      '/users/{userId}/todos',
-      '/users/{userId}/todos/{todoId}',
-    ],
+    allowedPaths: ['/auth/login', '/auth/me', '/todos', '/todos/{todoId}'],
   },
   {
     title: 'Note API',
-    description:
-      'Note HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+    description: 'Note HTTP API with authenticated routes and login helpers.',
     path: 'docs/notes',
     modules: [NoteModule, IamModule],
-    allowedPaths: [
-      '/auth/login',
-      '/auth/me',
-      '/notes',
-      '/notes/{noteId}',
-      '/users/{userId}/notes',
-      '/users/{userId}/notes/{noteId}',
-    ],
+    allowedPaths: ['/auth/login', '/auth/me', '/notes', '/notes/{noteId}'],
   },
   {
     title: 'Contact API',
     description:
-      'Contact HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+      'Contact HTTP API with authenticated routes and login helpers.',
     path: 'docs/contacts',
     modules: [ContactModule, IamModule],
     allowedPaths: [
@@ -96,44 +75,28 @@ const swaggerDocuments: readonly SwaggerDocumentDefinition[] = [
       '/auth/me',
       '/contacts',
       '/contacts/{contactId}',
-      '/users/{userId}/contacts',
-      '/users/{userId}/contacts/{contactId}',
     ],
   },
   {
     title: 'Book Library API',
     description:
-      'Book Library HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+      'Book Library HTTP API with authenticated routes and login helpers.',
     path: 'docs/books',
     modules: [BookModule, IamModule],
-    allowedPaths: [
-      '/auth/login',
-      '/auth/me',
-      '/books',
-      '/books/{bookId}',
-      '/users/{userId}/books',
-      '/users/{userId}/books/{bookId}',
-    ],
+    allowedPaths: ['/auth/login', '/auth/me', '/books', '/books/{bookId}'],
   },
   {
     title: 'Movie Watchlist API',
     description:
-      'Movie Watchlist HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+      'Movie Watchlist HTTP API with authenticated routes and login helpers.',
     path: 'docs/movies',
     modules: [MovieModule, IamModule],
-    allowedPaths: [
-      '/auth/login',
-      '/auth/me',
-      '/movies',
-      '/movies/{movieId}',
-      '/users/{userId}/movies',
-      '/users/{userId}/movies/{movieId}',
-    ],
+    allowedPaths: ['/auth/login', '/auth/me', '/movies', '/movies/{movieId}'],
   },
   {
     title: 'Expense Tracker API',
     description:
-      'Expense Tracker HTTP API with authenticated routes, user-id demo routes, and login helpers.',
+      'Expense Tracker HTTP API with authenticated routes and login helpers.',
     path: 'docs/expenses',
     modules: [ExpenseModule, IamModule],
     allowedPaths: [
@@ -141,8 +104,6 @@ const swaggerDocuments: readonly SwaggerDocumentDefinition[] = [
       '/auth/me',
       '/transactions',
       '/transactions/{expenseId}',
-      '/users/{userId}/transactions',
-      '/users/{userId}/transactions/{expenseId}',
     ],
   },
 ];
@@ -203,12 +164,17 @@ export function setupSwaggerDocs(
       },
     );
 
-    SwaggerModule.setup(swaggerDocument.path, app, cleanupOpenApiDoc(
-      filterDocumentPaths(document, swaggerDocument.allowedPaths),
-    ), {
-      jsonDocumentUrl: `${swaggerDocument.path}-json`,
-      yamlDocumentUrl: `${swaggerDocument.path}-yaml`,
-    });
+    SwaggerModule.setup(
+      swaggerDocument.path,
+      app,
+      cleanupOpenApiDoc(
+        filterDocumentPaths(document, swaggerDocument.allowedPaths),
+      ),
+      {
+        jsonDocumentUrl: `${swaggerDocument.path}-json`,
+        yamlDocumentUrl: `${swaggerDocument.path}-yaml`,
+      },
+    );
   }
 }
 
