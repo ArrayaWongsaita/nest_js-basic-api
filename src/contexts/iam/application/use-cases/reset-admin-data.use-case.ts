@@ -1,8 +1,15 @@
 import { Result } from '../../../../shared/application/result';
 import { UseCase } from '../../../../shared/application/use-case';
 import { AdminDataResetResult } from '../dto/admin-data-reset.result';
+import {
+  ADMIN_MAINTENANCE_DISABLED_IN_PRODUCTION_MESSAGE,
+  AdminMaintenancePolicy,
+} from '../ports/admin-maintenance-policy.port';
 import { AdminUserManagementPort } from '../ports/admin-user-management.port';
-import { AdminResetScope, ResettableDomainHandler } from '../ports/resettable-domain-handler.port';
+import {
+  AdminResetScope,
+  ResettableDomainHandler,
+} from '../ports/resettable-domain-handler.port';
 import { RbacCatalogPort } from '../ports/rbac-catalog.port';
 
 export interface ResetAdminDataRequest {
@@ -13,19 +20,24 @@ export interface ResetAdminDataRequest {
   readonly reason?: string;
 }
 
-export class ResetAdminDataUseCase
-  implements
-    UseCase<ResetAdminDataRequest, Result<AdminDataResetResult, string>>
-{
+export class ResetAdminDataUseCase implements UseCase<
+  ResetAdminDataRequest,
+  Result<AdminDataResetResult, string>
+> {
   constructor(
     private readonly handlers: readonly ResettableDomainHandler[],
     private readonly adminUserManagement: AdminUserManagementPort,
     private readonly rbacCatalog: RbacCatalogPort,
+    private readonly maintenancePolicy: AdminMaintenancePolicy,
   ) {}
 
   async execute(
     request: ResetAdminDataRequest,
   ): Promise<Result<AdminDataResetResult, string>> {
+    if (!this.maintenancePolicy.allowed) {
+      return Result.failure(ADMIN_MAINTENANCE_DISABLED_IN_PRODUCTION_MESSAGE);
+    }
+
     if (request.scope === 'user' && !request.targetUserId) {
       return Result.failure('targetUserId is required for user-scoped resets.');
     }
@@ -41,14 +53,18 @@ export class ResetAdminDataUseCase
     }
 
     if (request.scope === 'user' && request.targetUserId) {
-      const user = await this.adminUserManagement.findById(request.targetUserId);
+      const user = await this.adminUserManagement.findById(
+        request.targetUserId,
+      );
 
       if (!user) {
         return Result.failure('User was not found.');
       }
 
       if (user.isSystem && resolvedDomains.value.includes('iam')) {
-        return Result.failure('System users cannot be reset through IAM reset.');
+        return Result.failure(
+          'System users cannot be reset through IAM reset.',
+        );
       }
     }
 
@@ -99,7 +115,9 @@ function resolveRequestedDomains(
   domains: readonly string[],
   supportedDomains: readonly string[],
 ): Result<string[], string> {
-  const normalizedDomains = domains.map((domain) => domain.trim().toLowerCase());
+  const normalizedDomains = domains.map((domain) =>
+    domain.trim().toLowerCase(),
+  );
 
   if (normalizedDomains.includes('all')) {
     return Result.success([...supportedDomains]);
