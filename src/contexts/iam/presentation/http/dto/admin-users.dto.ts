@@ -173,6 +173,32 @@ export class UpdateAdminUserStatusBodyDto extends createZodDto(
   UpdateAdminUserStatusBodySchema,
 ) {}
 
+export const AdminUserPasswordResetSchema = z.object({
+  userId: z.string().uuid().meta({
+    description: 'Unique identifier of the user whose password was reset.',
+    example: '8f8da2a4-2dd1-4c3c-80cb-0cc371c43ec1',
+  }),
+  temporaryPassword: z.string().min(12).meta({
+    description:
+      'Temporary password. Shown only in this response; the user must replace it at next sign-in.',
+    example: 'k3Jf9x_Qw2Zr8vLmN4pT7yB1cD5eG6hA',
+  }),
+}).meta({ id: 'AdminUserPasswordReset' });
+
+export class AdminUserPasswordResetResponseDto extends createZodDto(
+  AdminUserPasswordResetSchema,
+) {}
+
+export const AdminUserPasswordResetHttpResponseSchema =
+  buildSuccessResponseSchema({
+    id: 'AdminUserPasswordResetHttpResponse',
+    dataSchema: AdminUserPasswordResetSchema,
+  });
+
+export class AdminUserPasswordResetHttpResponseDto extends createZodDto(
+  AdminUserPasswordResetHttpResponseSchema,
+) {}
+
 export const AdminUserRouteParamsSchema = z.object({
   userId: z.string().uuid().meta({
     description: 'Unique identifier of the target user.',

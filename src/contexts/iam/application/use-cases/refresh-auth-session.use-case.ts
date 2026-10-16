@@ -64,6 +64,7 @@ export class RefreshAuthSessionUseCase
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      mustChangePassword: user.mustChangePassword,
     });
 
     return Result.success({
@@ -72,6 +73,7 @@ export class RefreshAuthSessionUseCase
         accessToken: accessToken.token,
         tokenType: DEFAULT_ACCESS_TOKEN_TYPE,
         expiresInSeconds: accessToken.expiresInSeconds,
+        mustChangePassword: user.mustChangePassword,
         user: {
           userId: user.userId,
           email: user.email,

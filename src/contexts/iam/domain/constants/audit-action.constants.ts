@@ -1,5 +1,6 @@
 export const AUDIT_ACTIONS = {
   userStatusChanged: 'user.status_changed',
+  userPasswordReset: 'user.password_reset',
   userRolesChanged: 'user.roles_changed',
   roleCreated: 'role.created',
   roleUpdated: 'role.updated',

@@ -3,6 +3,8 @@ export interface AccessTokenClaims {
   email: string;
   roles: string[];
   permissions: string[];
+  /** When true the token may only be used to change the password. */
+  mustChangePassword?: boolean;
   iat: number;
   exp: number;
 }
@@ -18,6 +20,7 @@ export interface AccessTokenIssuer {
     email: string;
     roles: string[];
     permissions: string[];
+    mustChangePassword?: boolean;
   }): Promise<IssuedAccessToken>;
   verify(token: string): Promise<AccessTokenClaims>;
 }

@@ -12,6 +12,10 @@ import { ResetAdminDataRequest } from '../use-cases/reset-admin-data.use-case';
 import { CreateRoleRequest } from '../use-cases/create-role.use-case';
 import { UpdateRoleRequest } from '../use-cases/update-role.use-case';
 import { UpdatePermissionRequest } from '../use-cases/update-permission.use-case';
+import {
+  ResetAdminUserPasswordRequest,
+  ResetAdminUserPasswordResult,
+} from '../use-cases/reset-admin-user-password.use-case';
 import { UpdateAdminUserRolesRequest } from '../use-cases/update-admin-user-roles.use-case';
 import { UpdateAdminUserStatusRequest } from '../use-cases/update-admin-user-status.use-case';
 
@@ -27,6 +31,10 @@ export type AuditedUpdateUserStatus = AuditedAction<
 export type AuditedUpdateUserRoles = AuditedAction<
   UpdateAdminUserRolesRequest,
   Result<AdminUserView, string>
+>;
+export type AuditedResetUserPassword = AuditedAction<
+  ResetAdminUserPasswordRequest,
+  Result<ResetAdminUserPasswordResult, string>
 >;
 export type AuditedCreateRole = AuditedAction<
   CreateRoleRequest,
@@ -77,6 +85,17 @@ export function describeUserRolesChange(
     targetType: AUDIT_TARGET_TYPES.user,
     targetId: request.userId,
     details: { roleNames: [...request.roleNames] },
+  };
+}
+
+/** Never include the generated password (or its hash) here. */
+export function describeUserPasswordReset(
+  request: ResetAdminUserPasswordRequest,
+): AuditDescriptor {
+  return {
+    action: AUDIT_ACTIONS.userPasswordReset,
+    targetType: AUDIT_TARGET_TYPES.user,
+    targetId: request.userId,
   };
 }
 

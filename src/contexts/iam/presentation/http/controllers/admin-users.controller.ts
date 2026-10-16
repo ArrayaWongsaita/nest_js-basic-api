@@ -28,6 +28,7 @@ import {
 import {
   CREATE_ADMIN_USER_USE_CASE,
   GET_ADMIN_USER_USE_CASE,
+  RESET_ADMIN_USER_PASSWORD_USE_CASE,
   LIST_ADMIN_USERS_USE_CASE,
   UPDATE_ADMIN_USER_ROLES_USE_CASE,
   UPDATE_ADMIN_USER_STATUS_USE_CASE,
@@ -36,6 +37,7 @@ import { CreateAdminUserUseCase } from '../../../application/use-cases/create-ad
 import { GetAdminUserUseCase } from '../../../application/use-cases/get-admin-user.use-case';
 import { ListAdminUsersUseCase } from '../../../application/use-cases/list-admin-users.use-case';
 import type {
+  AuditedResetUserPassword,
   AuditedUpdateUserRoles,
   AuditedUpdateUserStatus,
 } from '../../../application/audit/admin-audit-descriptors';
@@ -43,6 +45,7 @@ import {
   IAM_USERS_CREATE_PERMISSION,
   IAM_USERS_DEACTIVATE_PERMISSION,
   IAM_USERS_READ_PERMISSION,
+  IAM_USERS_RESET_PASSWORD_PERMISSION,
   IAM_USERS_UPDATE_ROLES_PERMISSION,
 } from '../../../domain/constants/permission-name.constants';
 import { CurrentUser } from '../../../../../shared/presentation/http/auth/current-user.decorator';
@@ -54,6 +57,7 @@ import {
 } from '../../../../../shared/presentation/http/response/http-response-envelope';
 import {
   AdminUserHttpResponseDto,
+  AdminUserPasswordResetHttpResponseDto,
   AdminUserResponseDto,
   AdminUserRouteParamsDto,
   AdminUsersHttpResponseDto,
@@ -79,6 +83,8 @@ export class AdminUsersController {
     private readonly updateAdminUserRolesUseCase: AuditedUpdateUserRoles,
     @Inject(UPDATE_ADMIN_USER_STATUS_USE_CASE)
     private readonly updateAdminUserStatusUseCase: AuditedUpdateUserStatus,
+    @Inject(RESET_ADMIN_USER_PASSWORD_USE_CASE)
+    private readonly resetAdminUserPasswordUseCase: AuditedResetUserPassword,
   ) {}
 
   @Get()
@@ -251,5 +257,42 @@ export class AdminUsersController {
     }
 
     return createSuccessResponse(AdminPresenter.toUserResponse(result.value));
+  }
+
+  @Post(':userId/password-reset')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(IAM_USERS_RESET_PASSWORD_PERMISSION)
+  @ApiUpdateEndpointDocs({
+    summary: 'Reset the password of one IAM user',
+    description:
+      'Generates a temporary password, returns it once, ends the user session and forces a password change at next sign-in.',
+    badRequestDescription: 'The route parameters failed validation.',
+    successDescription: 'The password was reset and the temporary password returned.',
+    responseType: AdminUserPasswordResetHttpResponseDto,
+  })
+  @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
+  @ApiForbiddenErrorResponse(
+    'The authenticated user is missing iam.users.reset_password.',
+  )
+  @ApiNotFoundErrorResponse('The requested user was not found.')
+  async resetUserPassword(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+    @Param() params: AdminUserRouteParamsDto,
+  ): Promise<
+    HttpSuccessResponse<{ userId: string; temporaryPassword: string }>
+  > {
+    const result = await this.resetAdminUserPasswordUseCase.execute(
+      currentUser.userId,
+      { actorUserId: currentUser.userId, userId: params.userId },
+    );
+
+    if (!result.ok) {
+      throw new NotFoundException(result.error);
+    }
+
+    return createSuccessResponse({
+      userId: result.value.userId,
+      temporaryPassword: result.value.temporaryPassword,
+    });
   }
 }
