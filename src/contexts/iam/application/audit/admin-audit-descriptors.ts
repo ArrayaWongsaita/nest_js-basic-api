@@ -13,6 +13,8 @@ import { CreateRoleRequest } from '../use-cases/create-role.use-case';
 import { UpdateRoleRequest } from '../use-cases/update-role.use-case';
 import { UpdatePermissionRequest } from '../use-cases/update-permission.use-case';
 import { UpdateAdminUserRolesRequest } from '../use-cases/update-admin-user-roles.use-case';
+import { DeleteAdminUserRequest } from '../use-cases/delete-admin-user.use-case';
+import { RestoreAdminUserRequest } from '../use-cases/restore-admin-user.use-case';
 import { UpdateAdminUserStatusRequest } from '../use-cases/update-admin-user-status.use-case';
 
 /**
@@ -26,6 +28,14 @@ export type AuditedUpdateUserStatus = AuditedAction<
 >;
 export type AuditedUpdateUserRoles = AuditedAction<
   UpdateAdminUserRolesRequest,
+  Result<AdminUserView, string>
+>;
+export type AuditedDeleteUser = AuditedAction<
+  DeleteAdminUserRequest,
+  Result<AdminUserView, string>
+>;
+export type AuditedRestoreUser = AuditedAction<
+  RestoreAdminUserRequest,
   Result<AdminUserView, string>
 >;
 export type AuditedCreateRole = AuditedAction<
@@ -77,6 +87,26 @@ export function describeUserRolesChange(
     targetType: AUDIT_TARGET_TYPES.user,
     targetId: request.userId,
     details: { roleNames: [...request.roleNames] },
+  };
+}
+
+export function describeUserDeletion(
+  request: DeleteAdminUserRequest,
+): AuditDescriptor {
+  return {
+    action: AUDIT_ACTIONS.userDeleted,
+    targetType: AUDIT_TARGET_TYPES.user,
+    targetId: request.userId,
+  };
+}
+
+export function describeUserRestoration(
+  request: RestoreAdminUserRequest,
+): AuditDescriptor {
+  return {
+    action: AUDIT_ACTIONS.userRestored,
+    targetType: AUDIT_TARGET_TYPES.user,
+    targetId: request.userId,
   };
 }
 

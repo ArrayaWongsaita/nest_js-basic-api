@@ -1,4 +1,5 @@
 import {
+  AdminUserListFilters,
   AdminUserManagementPort,
   AdminUserView,
   PaginatedAdminUsers,
@@ -14,6 +15,7 @@ export interface FakeUserSeed {
   readonly roleNames?: readonly string[];
   readonly isActive?: boolean;
   readonly isSystem?: boolean;
+  readonly isDeleted?: boolean;
 }
 
 const KNOWN_ROLE_NAMES = ['admin', 'student', 'editor'];
@@ -24,6 +26,7 @@ export function createFakeUser(seed: FakeUserSeed): AdminUserView {
     email: `${seed.userId}@example.com`,
     isActive: seed.isActive ?? true,
     isSystem: seed.isSystem ?? false,
+    deletedAt: seed.isDeleted ? new Date('2026-02-01T00:00:00.000Z') : null,
     roles: (seed.roleNames ?? ['student']).map((name) => ({
       id: roleIdFor(name),
       name,
@@ -60,8 +63,10 @@ export class InMemoryIamAdmin
     return Promise.resolve(this.users.get(userId) ?? null);
   }
 
-  listUsers(): Promise<PaginatedAdminUsers> {
-    const items = [...this.users.values()];
+  listUsers(filters: AdminUserListFilters = {}): Promise<PaginatedAdminUsers> {
+    const items = [...this.users.values()].filter(
+      (user) => filters.includeDeleted || user.deletedAt === null,
+    );
 
     return Promise.resolve({ items, totalItems: items.length });
   }
@@ -85,6 +90,7 @@ export class InMemoryIamAdmin
       roleNames,
       isActive: user.isActive,
       isSystem: user.isSystem,
+      isDeleted: user.deletedAt !== null,
     });
     this.users.set(userId, updated);
 
@@ -107,11 +113,37 @@ export class InMemoryIamAdmin
     return Promise.resolve(updated);
   }
 
+  softDeleteUser(userId: string): Promise<AdminUserView | null> {
+    return this.setDeletedAt(userId, new Date());
+  }
+
+  restoreUser(userId: string): Promise<AdminUserView | null> {
+    return this.setDeletedAt(userId, null);
+  }
+
+  private setDeletedAt(
+    userId: string,
+    deletedAt: Date | null,
+  ): Promise<AdminUserView | null> {
+    const user = this.users.get(userId);
+
+    if (!user) {
+      return Promise.resolve(null);
+    }
+
+    const updated = { ...user, deletedAt };
+    this.users.set(userId, updated);
+
+    return Promise.resolve(updated);
+  }
+
   countActiveAdmins(): Promise<number> {
     return Promise.resolve(
       [...this.users.values()].filter(
         (user) =>
-          user.isActive && user.roles.some((role) => role.name === 'admin'),
+          user.isActive &&
+          user.deletedAt === null &&
+          user.roles.some((role) => role.name === 'admin'),
       ).length,
     );
   }

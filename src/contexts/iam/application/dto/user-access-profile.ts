@@ -4,6 +4,7 @@ export interface UserAccessProfile {
   passwordHash: string;
   isActive: boolean;
   isSystem: boolean;
+  isDeleted: boolean;
   roles: string[];
   permissions: string[];
 }

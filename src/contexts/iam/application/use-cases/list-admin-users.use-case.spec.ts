@@ -15,6 +15,7 @@ function user(
     email,
     isActive,
     isSystem: false,
+    deletedAt: null,
     roles: roleNames.map((name) => ({ id: name, name, isSystem: false })),
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),

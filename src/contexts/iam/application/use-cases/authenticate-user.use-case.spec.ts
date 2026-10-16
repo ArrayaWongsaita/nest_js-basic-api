@@ -101,6 +101,7 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -140,6 +141,7 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: true,
         isSystem: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -170,6 +172,7 @@ describe('AuthenticateUserUseCase', () => {
         passwordHash: 'hashed:strong-password-123',
         isActive: false,
         isSystem: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -191,6 +194,40 @@ describe('AuthenticateUserUseCase', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toBe('User account is inactive.');
+    expect(sessionRepository.savedSession).toBeNull();
+  });
+
+  it('rejects soft-deleted users', async () => {
+    const sessionRepository = new InMemoryAuthSessionRepository();
+    const useCase = new AuthenticateUserUseCase(
+      new InMemoryUserAccessReader({
+        userId: 'user-1',
+        email: 'architect@example.com',
+        passwordHash: 'hashed:strong-password-123',
+        isActive: true,
+        isSystem: false,
+        isDeleted: true,
+        roles: ['student'],
+        permissions: ['todo.create_own'],
+      }),
+      new TestPasswordHasher(),
+      new StubAccessTokenIssuer(),
+      sessionRepository,
+      new StubOpaqueTokenGenerator(),
+      new StubOpaqueTokenHasher(),
+      new FixedClock(new Date('2026-05-25T10:00:00.000Z')),
+      60 * 60 * 24 * 30,
+    );
+
+    const result = await useCase.execute(
+      new AuthenticateUserCommand(
+        'architect@example.com',
+        'strong-password-123',
+      ),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Invalid email or password.');
     expect(sessionRepository.savedSession).toBeNull();
   });
 });
