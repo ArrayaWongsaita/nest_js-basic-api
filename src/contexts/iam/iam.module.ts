@@ -38,6 +38,7 @@ import {
   USER_ACCESS_READER,
   USER_REPOSITORY,
 } from './application/tokens';
+import { AdminMaintenancePolicy } from './application/ports/admin-maintenance-policy.port';
 import { AuthenticateUserUseCase } from './application/use-cases/authenticate-user.use-case';
 import { CreateAdminUserUseCase } from './application/use-cases/create-admin-user.use-case';
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.use-case';
@@ -78,6 +79,16 @@ import { AuthController } from './presentation/http/controllers/auth.controller'
 import { UsersController } from './presentation/http/controllers/users.controller';
 import { APP_CONFIG, AppConfig } from '../../bootstrap/config/app-config';
 import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prisma/prisma-todo-reset.handler';
+
+function toAdminMaintenancePolicy(
+  appConfig: AppConfig,
+): AdminMaintenancePolicy {
+  return {
+    allowed:
+      appConfig.environment !== 'production' ||
+      appConfig.adminMaintenance.allowInProduction,
+  };
+}
 
 @Module({
   imports: [DbModule],
@@ -223,10 +234,7 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
         authSessionRepository: PrismaAuthSessionRepository,
         opaqueTokenHasher: Sha256OpaqueTokenHasher,
       ) =>
-        new LogoutAuthSessionUseCase(
-          authSessionRepository,
-          opaqueTokenHasher,
-        ),
+        new LogoutAuthSessionUseCase(authSessionRepository, opaqueTokenHasher),
       inject: [AUTH_SESSION_REPOSITORY, OPAQUE_TOKEN_HASHER],
     },
     {
@@ -345,15 +353,32 @@ import { PrismaTodoResetHandler } from '../todo/infrastructure/persistence/prism
         handlers: readonly [PrismaIamResetHandler | PrismaTodoResetHandler],
         adminUserManagement: PrismaIamAdminGateway,
         rbacCatalog: PrismaIamAdminGateway,
+        appConfig: AppConfig,
       ) =>
-        new ResetAdminDataUseCase(handlers, adminUserManagement, rbacCatalog),
-      inject: [RESETTABLE_DOMAINS, ADMIN_USER_MANAGEMENT, RBAC_CATALOG],
+        new ResetAdminDataUseCase(
+          handlers,
+          adminUserManagement,
+          rbacCatalog,
+          toAdminMaintenancePolicy(appConfig),
+        ),
+      inject: [
+        RESETTABLE_DOMAINS,
+        ADMIN_USER_MANAGEMENT,
+        RBAC_CATALOG,
+        APP_CONFIG,
+      ],
     },
     {
       provide: SEED_DEMO_USERS_USE_CASE,
-      useFactory: (demoUserSeeder: PrismaDemoUserSeedGateway) =>
-        new SeedDemoUsersUseCase(demoUserSeeder),
-      inject: [DEMO_USER_SEEDER],
+      useFactory: (
+        demoUserSeeder: PrismaDemoUserSeedGateway,
+        appConfig: AppConfig,
+      ) =>
+        new SeedDemoUsersUseCase(
+          demoUserSeeder,
+          toAdminMaintenancePolicy(appConfig),
+        ),
+      inject: [DEMO_USER_SEEDER, APP_CONFIG],
     },
     {
       provide: APP_GUARD,

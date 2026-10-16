@@ -57,15 +57,21 @@ export class AdminDemoUserSeedsController {
     ],
   })
   @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
-  @ApiForbiddenErrorResponse('The authenticated user is missing system.reset.any.')
+  @ApiForbiddenErrorResponse(
+    'The authenticated user is missing system.reset.any.',
+  )
   async createSeed(): Promise<
     HttpSuccessResponse<AdminDemoUserSeedResponseDto>
   > {
     try {
       const result = await this.seedDemoUsersUseCase.execute();
 
+      if (!result.ok) {
+        throw new ConflictException(result.error);
+      }
+
       return createSuccessResponse(
-        AdminPresenter.toDemoUserSeedResponse(result),
+        AdminPresenter.toDemoUserSeedResponse(result.value),
       );
     } catch (error) {
       if (isPrismaSchemaDriftError(error)) {
