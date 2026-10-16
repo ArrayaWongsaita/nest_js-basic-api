@@ -73,6 +73,18 @@ describe('DEFAULT_ROLE_PERMISSION_MAP', () => {
     );
   });
 
+  it('grants cross-user todo access to admin only', () => {
+    expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toEqual(
+      expect.arrayContaining(['todo.read_any', 'todo.delete_any']),
+    );
+    expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+      'todo.read_any',
+    );
+    expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+      'todo.delete_any',
+    );
+  });
+
   it('grants audit-log read to admin only', () => {
     expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toContain(
       IAM_AUDIT_LOGS_READ_PERMISSION,

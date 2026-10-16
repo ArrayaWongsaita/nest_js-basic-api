@@ -57,6 +57,9 @@ import {
   describeUserDeletion,
   describeUserRestoration,
 } from './application/audit/admin-audit-descriptors';
+import { USER_EXISTENCE } from '../../shared/application/tokens';
+import { AdminUserExistence } from './application/services/admin-user-existence';
+import type { AdminUserManagementPort } from './application/ports/admin-user-management.port';
 import type { AuditLogPort } from './application/ports/audit-log.port';
 import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entries.use-case';
 import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
@@ -143,6 +146,12 @@ function toAdminMaintenancePolicy(
     {
       provide: AUDIT_LOG,
       useClass: PrismaAuditLogRepository,
+    },
+    {
+      provide: USER_EXISTENCE,
+      useFactory: (users: AdminUserManagementPort) =>
+        new AdminUserExistence(users),
+      inject: [ADMIN_USER_MANAGEMENT],
     },
     {
       provide: LIST_AUDIT_ENTRIES_USE_CASE,
@@ -518,6 +527,8 @@ function toAdminMaintenancePolicy(
     REGISTER_USER_USE_CASE,
     USER_REPOSITORY,
     USER_ACCESS_READER,
+    USER_EXISTENCE,
+    AUDIT_LOG,
   ],
 })
 export class IamModule {}

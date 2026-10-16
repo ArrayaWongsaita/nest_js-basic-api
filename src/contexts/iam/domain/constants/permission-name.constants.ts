@@ -18,6 +18,8 @@ export const TODO_CREATE_OWN_PERMISSION = 'todo.create_own';
 export const TODO_READ_OWN_PERMISSION = 'todo.read_own';
 export const TODO_UPDATE_OWN_PERMISSION = 'todo.update_own';
 export const TODO_DELETE_OWN_PERMISSION = 'todo.delete_own';
+export const TODO_READ_ANY_PERMISSION = 'todo.read_any';
+export const TODO_DELETE_ANY_PERMISSION = 'todo.delete_any';
 export const NOTE_CREATE_OWN_PERMISSION = 'note.create_own';
 export const NOTE_READ_OWN_PERMISSION = 'note.read_own';
 export const NOTE_UPDATE_OWN_PERMISSION = 'note.update_own';
@@ -60,6 +62,8 @@ export const DEFAULT_PERMISSION_NAMES = [
   TODO_READ_OWN_PERMISSION,
   TODO_UPDATE_OWN_PERMISSION,
   TODO_DELETE_OWN_PERMISSION,
+  TODO_READ_ANY_PERMISSION,
+  TODO_DELETE_ANY_PERMISSION,
   NOTE_CREATE_OWN_PERMISSION,
   NOTE_READ_OWN_PERMISSION,
   NOTE_UPDATE_OWN_PERMISSION,

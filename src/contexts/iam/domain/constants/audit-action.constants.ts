@@ -11,6 +11,7 @@ export const AUDIT_ACTIONS = {
   permissionDeleted: 'permission.deleted',
   dataReset: 'system.data_reset',
   demoSeed: 'system.demo_seed',
+  todoDeletedByAdmin: 'todo.deleted_by_admin',
 } as const;
 
 export const AUDIT_TARGET_TYPES = {
@@ -18,4 +19,5 @@ export const AUDIT_TARGET_TYPES = {
   role: 'role',
   permission: 'permission',
   system: 'system',
+  todo: 'todo',
 } as const;
