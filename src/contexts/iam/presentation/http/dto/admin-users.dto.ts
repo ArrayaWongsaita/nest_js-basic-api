@@ -114,6 +114,10 @@ export const ListAdminUsersQuerySchema = z.object({
     description: 'Optional active-state filter.',
     example: true,
   }),
+  roleName: z.string().trim().min(1).optional().meta({
+    description: 'Optional exact role name filter. Unknown roles yield an empty list.',
+    example: 'student',
+  }),
   page: z.coerce.number().int().positive().default(1).meta({
     description: '1-based page number.',
     example: 1,
