@@ -12,6 +12,7 @@ export class AdminPresenter {
       email: user.email,
       isActive: user.isActive,
       isSystem: user.isSystem,
+      deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
       roles: user.roles.map((role) => ({
         id: role.id,
         name: role.name,

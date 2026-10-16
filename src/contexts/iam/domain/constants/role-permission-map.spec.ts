@@ -6,6 +6,8 @@ import {
   DEFAULT_PERMISSION_NAMES,
   IAM_AUDIT_LOGS_READ_PERMISSION,
   IAM_USERS_RESET_PASSWORD_PERMISSION,
+  IAM_USERS_DELETE_PERMISSION,
+  IAM_USERS_RESTORE_PERMISSION,
   EXPENSE_CREATE_OWN_PERMISSION,
   EXPENSE_DELETE_OWN_PERMISSION,
   EXPENSE_READ_OWN_PERMISSION,
@@ -72,6 +74,18 @@ describe('DEFAULT_ROLE_PERMISSION_MAP', () => {
     );
   });
 
+  it('grants cross-user todo access to admin only', () => {
+    expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toEqual(
+      expect.arrayContaining(['todo.read_any', 'todo.delete_any']),
+    );
+    expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+      'todo.read_any',
+    );
+    expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+      'todo.delete_any',
+    );
+  });
+
   it('grants audit-log read to admin only', () => {
     expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toContain(
       IAM_AUDIT_LOGS_READ_PERMISSION,
@@ -88,5 +102,19 @@ describe('DEFAULT_ROLE_PERMISSION_MAP', () => {
     expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
       IAM_USERS_RESET_PASSWORD_PERMISSION,
     );
+  });
+
+  it('grants user delete and restore to admin only', () => {
+    for (const permission of [
+      IAM_USERS_DELETE_PERMISSION,
+      IAM_USERS_RESTORE_PERMISSION,
+    ]) {
+      expect(DEFAULT_ROLE_PERMISSION_MAP[ADMIN_ROLE_NAME]).toContain(
+        permission,
+      );
+      expect(DEFAULT_ROLE_PERMISSION_MAP[STUDENT_ROLE_NAME]).not.toContain(
+        permission,
+      );
+    }
   });
 });

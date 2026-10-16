@@ -38,6 +38,8 @@ import {
   SEED_DEMO_USERS_USE_CASE,
   UPDATE_ADMIN_USER_ROLES_USE_CASE,
   UPDATE_ADMIN_USER_STATUS_USE_CASE,
+  DELETE_ADMIN_USER_USE_CASE,
+  RESTORE_ADMIN_USER_USE_CASE,
   UPDATE_PERMISSION_USE_CASE,
   UPDATE_ROLE_USE_CASE,
   USER_ACCESS_READER,
@@ -56,7 +58,12 @@ import {
   describeUserPasswordReset,
   describeUserRolesChange,
   describeUserStatusChange,
+  describeUserDeletion,
+  describeUserRestoration,
 } from './application/audit/admin-audit-descriptors';
+import { USER_EXISTENCE } from '../../shared/application/tokens';
+import { AdminUserExistence } from './application/services/admin-user-existence';
+import type { AdminUserManagementPort } from './application/ports/admin-user-management.port';
 import type { AuditLogPort } from './application/ports/audit-log.port';
 import { ListAuditEntriesUseCase } from './application/use-cases/list-audit-entries.use-case';
 import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
@@ -68,7 +75,6 @@ import type { UserCredentialsPort } from './application/ports/user-credentials.p
 import type { PasswordHasher } from './application/ports/password-hasher.port';
 import type { OpaqueTokenGenerator } from './application/ports/opaque-token-generator.port';
 import type { AuthSessionRepository } from './domain/repositories/auth-session.repository';
-import type { AdminUserManagementPort } from './application/ports/admin-user-management.port';
 import type { UserAccessReader } from './application/ports/user-access-reader.port';
 import { PrismaUserCredentialsGateway } from './infrastructure/persistence/prisma/prisma-user-credentials.gateway';
 import { AuthenticateUserUseCase } from './application/use-cases/authenticate-user.use-case';
@@ -88,6 +94,8 @@ import { RegisterUserUseCase } from './application/use-cases/register-user.use-c
 import { ResetAdminDataUseCase } from './application/use-cases/reset-admin-data.use-case';
 import { SeedDemoUsersUseCase } from './application/use-cases/seed-demo-users.use-case';
 import { UpdateAdminUserRolesUseCase } from './application/use-cases/update-admin-user-roles.use-case';
+import { DeleteAdminUserUseCase } from './application/use-cases/delete-admin-user.use-case';
+import { RestoreAdminUserUseCase } from './application/use-cases/restore-admin-user.use-case';
 import { UpdateAdminUserStatusUseCase } from './application/use-cases/update-admin-user-status.use-case';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.use-case';
 import { UpdateRoleUseCase } from './application/use-cases/update-role.use-case';
@@ -150,6 +158,12 @@ function toAdminMaintenancePolicy(
     {
       provide: AUDIT_LOG,
       useClass: PrismaAuditLogRepository,
+    },
+    {
+      provide: USER_EXISTENCE,
+      useFactory: (users: AdminUserManagementPort) =>
+        new AdminUserExistence(users),
+      inject: [ADMIN_USER_MANAGEMENT],
     },
     {
       provide: LIST_AUDIT_ENTRIES_USE_CASE,
@@ -402,6 +416,32 @@ function toAdminMaintenancePolicy(
       ],
     },
     {
+      provide: DELETE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new DeleteAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserDeletion,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
+      provide: RESTORE_ADMIN_USER_USE_CASE,
+      useFactory: (
+        adminUserManagement: PrismaIamAdminGateway,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new RestoreAdminUserUseCase(adminUserManagement),
+          auditLog,
+          describeUserRestoration,
+        ),
+      inject: [ADMIN_USER_MANAGEMENT, AUDIT_LOG],
+    },
+    {
       provide: LIST_ROLES_USE_CASE,
       useFactory: (rbacCatalog: PrismaIamAdminGateway) =>
         new ListRolesUseCase(rbacCatalog),
@@ -554,6 +594,8 @@ function toAdminMaintenancePolicy(
     REGISTER_USER_USE_CASE,
     USER_REPOSITORY,
     USER_ACCESS_READER,
+    USER_EXISTENCE,
+    AUDIT_LOG,
   ],
 })
 export class IamModule {}

@@ -3,6 +3,8 @@ export const IAM_USERS_READ_PERMISSION = 'iam.users.read';
 export const IAM_USERS_UPDATE_ROLES_PERMISSION = 'iam.users.update_roles';
 export const IAM_USERS_DEACTIVATE_PERMISSION = 'iam.users.deactivate';
 export const IAM_USERS_RESET_PASSWORD_PERMISSION = 'iam.users.reset_password';
+export const IAM_USERS_DELETE_PERMISSION = 'iam.users.delete';
+export const IAM_USERS_RESTORE_PERMISSION = 'iam.users.restore';
 export const IAM_ROLES_READ_PERMISSION = 'iam.roles.read';
 export const IAM_ROLES_CREATE_PERMISSION = 'iam.roles.create';
 export const IAM_ROLES_UPDATE_PERMISSION = 'iam.roles.update';
@@ -17,6 +19,8 @@ export const TODO_CREATE_OWN_PERMISSION = 'todo.create_own';
 export const TODO_READ_OWN_PERMISSION = 'todo.read_own';
 export const TODO_UPDATE_OWN_PERMISSION = 'todo.update_own';
 export const TODO_DELETE_OWN_PERMISSION = 'todo.delete_own';
+export const TODO_READ_ANY_PERMISSION = 'todo.read_any';
+export const TODO_DELETE_ANY_PERMISSION = 'todo.delete_any';
 export const NOTE_CREATE_OWN_PERMISSION = 'note.create_own';
 export const NOTE_READ_OWN_PERMISSION = 'note.read_own';
 export const NOTE_UPDATE_OWN_PERMISSION = 'note.update_own';
@@ -44,6 +48,8 @@ export const DEFAULT_PERMISSION_NAMES = [
   IAM_USERS_UPDATE_ROLES_PERMISSION,
   IAM_USERS_DEACTIVATE_PERMISSION,
   IAM_USERS_RESET_PASSWORD_PERMISSION,
+  IAM_USERS_DELETE_PERMISSION,
+  IAM_USERS_RESTORE_PERMISSION,
   IAM_ROLES_READ_PERMISSION,
   IAM_ROLES_CREATE_PERMISSION,
   IAM_ROLES_UPDATE_PERMISSION,
@@ -58,6 +64,8 @@ export const DEFAULT_PERMISSION_NAMES = [
   TODO_READ_OWN_PERMISSION,
   TODO_UPDATE_OWN_PERMISSION,
   TODO_DELETE_OWN_PERMISSION,
+  TODO_READ_ANY_PERMISSION,
+  TODO_DELETE_ANY_PERMISSION,
   NOTE_CREATE_OWN_PERMISSION,
   NOTE_READ_OWN_PERMISSION,
   NOTE_UPDATE_OWN_PERMISSION,

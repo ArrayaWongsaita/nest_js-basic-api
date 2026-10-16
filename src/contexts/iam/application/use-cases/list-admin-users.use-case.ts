@@ -6,6 +6,7 @@ export interface ListAdminUsersRequest {
   readonly search?: string;
   readonly isActive?: boolean;
   readonly roleName?: string;
+  readonly includeDeleted?: boolean;
   readonly page: number;
   readonly limit: number;
 }
@@ -23,6 +24,7 @@ export class ListAdminUsersUseCase
         search: request.search,
         isActive: request.isActive,
         roleName: request.roleName,
+        includeDeleted: request.includeDeleted,
       },
       request.page,
       request.limit,

@@ -30,6 +30,7 @@ export class InMemoryCredentialStore
         isActive: seed.isActive ?? true,
         isSystem: false,
         mustChangePassword: seed.mustChangePassword ?? false,
+        isDeleted: false,
         roles: seed.roles ?? ['student'],
         permissions: seed.permissions ?? [],
       });

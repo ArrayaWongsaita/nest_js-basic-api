@@ -108,6 +108,7 @@ describe('AuthenticateUserUseCase', () => {
         isActive: true,
         isSystem: false,
         mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -148,6 +149,7 @@ describe('AuthenticateUserUseCase', () => {
         isActive: true,
         isSystem: false,
         mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -179,6 +181,7 @@ describe('AuthenticateUserUseCase', () => {
         isActive: false,
         isSystem: false,
         mustChangePassword: false,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.create_own', 'todo.read_own'],
       }),
@@ -203,6 +206,41 @@ describe('AuthenticateUserUseCase', () => {
     expect(sessionRepository.savedSession).toBeNull();
   });
 
+  it('rejects soft-deleted users', async () => {
+    const sessionRepository = new InMemoryAuthSessionRepository();
+    const useCase = new AuthenticateUserUseCase(
+      new InMemoryUserAccessReader({
+        userId: 'user-1',
+        email: 'architect@example.com',
+        passwordHash: 'hashed:strong-password-123',
+        isActive: true,
+        isSystem: false,
+        mustChangePassword: false,
+        isDeleted: true,
+        roles: ['student'],
+        permissions: ['todo.create_own'],
+      }),
+      new TestPasswordHasher(),
+      new StubAccessTokenIssuer(),
+      sessionRepository,
+      new StubOpaqueTokenGenerator(),
+      new StubOpaqueTokenHasher(),
+      new FixedClock(new Date('2026-05-25T10:00:00.000Z')),
+      60 * 60 * 24 * 30,
+    );
+
+    const result = await useCase.execute(
+      new AuthenticateUserCommand(
+        'architect@example.com',
+        'strong-password-123',
+      ),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Invalid email or password.');
+    expect(sessionRepository.savedSession).toBeNull();
+  });
+
   it('marks the session as password-change-only when a change is required', async () => {
     const issuer = new StubAccessTokenIssuer();
     const useCase = new AuthenticateUserUseCase(
@@ -213,6 +251,7 @@ describe('AuthenticateUserUseCase', () => {
         isActive: true,
         isSystem: false,
         mustChangePassword: true,
+        isDeleted: false,
         roles: ['student'],
         permissions: ['todo.read_own'],
       }),

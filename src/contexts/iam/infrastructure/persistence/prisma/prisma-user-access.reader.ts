@@ -51,6 +51,7 @@ function mapUserAccessProfile(
         isActive: boolean;
         isSystem: boolean;
         mustChangePassword: boolean;
+        deletedAt: Date | null;
         roles: Array<{
           role: {
             name: string;
@@ -83,6 +84,7 @@ function mapUserAccessProfile(
     isActive: user.isActive,
     isSystem: user.isSystem,
     mustChangePassword: user.mustChangePassword,
+    isDeleted: user.deletedAt !== null,
     roles: user.roles.map((assignment) => assignment.role.name),
     permissions: [...permissions.values()],
   };

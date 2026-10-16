@@ -1,6 +1,19 @@
 import { Module } from '@nestjs/common';
 import { DbModule } from '../../shared/infrastructure/database';
+import { ForExistingUser } from '../../shared/application/for-existing-user';
+import { USER_EXISTENCE } from '../../shared/application/tokens';
+import type { UserExistencePort } from '../../shared/application/user-existence.port';
+import { AuditedAction } from '../iam/application/audit/audited-action';
+import type { AuditLogPort } from '../iam/application/ports/audit-log.port';
+import { AUDIT_LOG } from '../iam/application/tokens';
+import { IamModule } from '../iam/iam.module';
+import { describeAdminTodoDeletion } from './application/audit/todo-audit-descriptors';
+import { ListUserTodosAsResultUseCase } from './application/use-cases/list-user-todos-as-result.use-case';
+import { AdminUserTodosController } from './presentation/http/controllers/admin-user-todos.controller';
 import {
+  ADMIN_DELETE_USER_TODO_USE_CASE,
+  ADMIN_GET_USER_TODO_USE_CASE,
+  ADMIN_LIST_USER_TODOS_USE_CASE,
   CREATE_TODO_USE_CASE,
   DELETE_TODO_USE_CASE,
   GET_TODO_USE_CASE,
@@ -17,8 +30,8 @@ import { PrismaTodoRepository } from './infrastructure/persistence/prisma/prisma
 import { AuthenticatedTodosController } from './presentation/http/controllers/authenticated-todos.controller';
 
 @Module({
-  imports: [DbModule],
-  controllers: [AuthenticatedTodosController],
+  imports: [DbModule, IamModule],
+  controllers: [AuthenticatedTodosController, AdminUserTodosController],
   providers: [
     {
       provide: TODO_REPOSITORY,
@@ -53,6 +66,42 @@ import { AuthenticatedTodosController } from './presentation/http/controllers/au
       useFactory: (todoRepository: PrismaTodoRepository) =>
         new DeleteTodoUseCase(todoRepository),
       inject: [TODO_REPOSITORY],
+    },
+    {
+      provide: ADMIN_LIST_USER_TODOS_USE_CASE,
+      useFactory: (
+        todoRepository: PrismaTodoRepository,
+        users: UserExistencePort,
+      ) =>
+        new ForExistingUser(
+          new ListUserTodosAsResultUseCase(
+            new ListUserTodosUseCase(todoRepository),
+          ),
+          users,
+        ),
+      inject: [TODO_REPOSITORY, USER_EXISTENCE],
+    },
+    {
+      provide: ADMIN_GET_USER_TODO_USE_CASE,
+      useFactory: (
+        todoRepository: PrismaTodoRepository,
+        users: UserExistencePort,
+      ) => new ForExistingUser(new GetTodoUseCase(todoRepository), users),
+      inject: [TODO_REPOSITORY, USER_EXISTENCE],
+    },
+    {
+      provide: ADMIN_DELETE_USER_TODO_USE_CASE,
+      useFactory: (
+        todoRepository: PrismaTodoRepository,
+        users: UserExistencePort,
+        auditLog: AuditLogPort,
+      ) =>
+        new AuditedAction(
+          new ForExistingUser(new DeleteTodoUseCase(todoRepository), users),
+          auditLog,
+          describeAdminTodoDeletion,
+        ),
+      inject: [TODO_REPOSITORY, USER_EXISTENCE, AUDIT_LOG],
     },
   ],
 })

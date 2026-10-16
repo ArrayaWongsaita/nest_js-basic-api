@@ -2,6 +2,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -32,18 +33,24 @@ import {
   LIST_ADMIN_USERS_USE_CASE,
   UPDATE_ADMIN_USER_ROLES_USE_CASE,
   UPDATE_ADMIN_USER_STATUS_USE_CASE,
+  DELETE_ADMIN_USER_USE_CASE,
+  RESTORE_ADMIN_USER_USE_CASE,
 } from '../../../application/tokens';
 import { CreateAdminUserUseCase } from '../../../application/use-cases/create-admin-user.use-case';
 import { GetAdminUserUseCase } from '../../../application/use-cases/get-admin-user.use-case';
 import { ListAdminUsersUseCase } from '../../../application/use-cases/list-admin-users.use-case';
 import type {
   AuditedResetUserPassword,
+  AuditedDeleteUser,
+  AuditedRestoreUser,
   AuditedUpdateUserRoles,
   AuditedUpdateUserStatus,
 } from '../../../application/audit/admin-audit-descriptors';
 import {
   IAM_USERS_CREATE_PERMISSION,
   IAM_USERS_DEACTIVATE_PERMISSION,
+  IAM_USERS_DELETE_PERMISSION,
+  IAM_USERS_RESTORE_PERMISSION,
   IAM_USERS_READ_PERMISSION,
   IAM_USERS_RESET_PASSWORD_PERMISSION,
   IAM_USERS_UPDATE_ROLES_PERMISSION,
@@ -85,6 +92,10 @@ export class AdminUsersController {
     private readonly updateAdminUserStatusUseCase: AuditedUpdateUserStatus,
     @Inject(RESET_ADMIN_USER_PASSWORD_USE_CASE)
     private readonly resetAdminUserPasswordUseCase: AuditedResetUserPassword,
+    @Inject(DELETE_ADMIN_USER_USE_CASE)
+    private readonly deleteAdminUserUseCase: AuditedDeleteUser,
+    @Inject(RESTORE_ADMIN_USER_USE_CASE)
+    private readonly restoreAdminUserUseCase: AuditedRestoreUser,
   ) {}
 
   @Get()
@@ -247,6 +258,84 @@ export class AdminUsersController {
       userId: params.userId,
       isActive: body.isActive,
     });
+
+    if (!result.ok) {
+      if (result.error === 'User was not found.') {
+        throw new NotFoundException(result.error);
+      }
+
+      throw new ConflictException(result.error);
+    }
+
+    return createSuccessResponse(AdminPresenter.toUserResponse(result.value));
+  }
+
+  @Delete(':userId')
+  @RequirePermissions(IAM_USERS_DELETE_PERMISSION)
+  @ApiUpdateEndpointDocs({
+    summary: 'Soft-delete one IAM user',
+    description:
+      'Marks the user as deleted: they can no longer sign in, are hidden from the default list and lose their session. Data is retained and the action can be reversed with restore.',
+    badRequestDescription: 'The route parameters failed validation.',
+    successDescription: 'The IAM user was soft-deleted successfully.',
+    responseType: AdminUserHttpResponseDto,
+    additionalResponses: [
+      ApiConflictErrorResponse(
+        'The deletion violates an admin safety rule (self, system user, last active admin) or the user is already deleted.',
+      ),
+    ],
+  })
+  @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
+  @ApiForbiddenErrorResponse(
+    'The authenticated user is missing iam.users.delete.',
+  )
+  @ApiNotFoundErrorResponse('The requested user was not found.')
+  async deleteUser(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+    @Param() params: AdminUserRouteParamsDto,
+  ): Promise<HttpSuccessResponse<AdminUserResponseDto>> {
+    const result = await this.deleteAdminUserUseCase.execute(
+      currentUser.userId,
+      { actorUserId: currentUser.userId, userId: params.userId },
+    );
+
+    if (!result.ok) {
+      if (result.error === 'User was not found.') {
+        throw new NotFoundException(result.error);
+      }
+
+      throw new ConflictException(result.error);
+    }
+
+    return createSuccessResponse(AdminPresenter.toUserResponse(result.value));
+  }
+
+  @Post(':userId/restore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(IAM_USERS_RESTORE_PERMISSION)
+  @ApiUpdateEndpointDocs({
+    summary: 'Restore one soft-deleted IAM user',
+    description: 'Clears the deleted marker so the user can sign in again.',
+    badRequestDescription: 'The route parameters failed validation.',
+    successDescription: 'The IAM user was restored successfully.',
+    responseType: AdminUserHttpResponseDto,
+    additionalResponses: [
+      ApiConflictErrorResponse('The user is not deleted.'),
+    ],
+  })
+  @ApiUnauthorizedErrorResponse('A valid Bearer access token is required.')
+  @ApiForbiddenErrorResponse(
+    'The authenticated user is missing iam.users.restore.',
+  )
+  @ApiNotFoundErrorResponse('The requested user was not found.')
+  async restoreUser(
+    @CurrentUser() currentUser: AuthenticatedUserContext,
+    @Param() params: AdminUserRouteParamsDto,
+  ): Promise<HttpSuccessResponse<AdminUserResponseDto>> {
+    const result = await this.restoreAdminUserUseCase.execute(
+      currentUser.userId,
+      { actorUserId: currentUser.userId, userId: params.userId },
+    );
 
     if (!result.ok) {
       if (result.error === 'User was not found.') {

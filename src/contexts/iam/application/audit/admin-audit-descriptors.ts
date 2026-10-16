@@ -17,6 +17,8 @@ import {
   ResetAdminUserPasswordResult,
 } from '../use-cases/reset-admin-user-password.use-case';
 import { UpdateAdminUserRolesRequest } from '../use-cases/update-admin-user-roles.use-case';
+import { DeleteAdminUserRequest } from '../use-cases/delete-admin-user.use-case';
+import { RestoreAdminUserRequest } from '../use-cases/restore-admin-user.use-case';
 import { UpdateAdminUserStatusRequest } from '../use-cases/update-admin-user-status.use-case';
 
 /**
@@ -35,6 +37,14 @@ export type AuditedUpdateUserRoles = AuditedAction<
 export type AuditedResetUserPassword = AuditedAction<
   ResetAdminUserPasswordRequest,
   Result<ResetAdminUserPasswordResult, string>
+>;
+export type AuditedDeleteUser = AuditedAction<
+  DeleteAdminUserRequest,
+  Result<AdminUserView, string>
+>;
+export type AuditedRestoreUser = AuditedAction<
+  RestoreAdminUserRequest,
+  Result<AdminUserView, string>
 >;
 export type AuditedCreateRole = AuditedAction<
   CreateRoleRequest,
@@ -94,6 +104,26 @@ export function describeUserPasswordReset(
 ): AuditDescriptor {
   return {
     action: AUDIT_ACTIONS.userPasswordReset,
+    targetType: AUDIT_TARGET_TYPES.user,
+    targetId: request.userId,
+  };
+}
+
+export function describeUserDeletion(
+  request: DeleteAdminUserRequest,
+): AuditDescriptor {
+  return {
+    action: AUDIT_ACTIONS.userDeleted,
+    targetType: AUDIT_TARGET_TYPES.user,
+    targetId: request.userId,
+  };
+}
+
+export function describeUserRestoration(
+  request: RestoreAdminUserRequest,
+): AuditDescriptor {
+  return {
+    action: AUDIT_ACTIONS.userRestored,
     targetType: AUDIT_TARGET_TYPES.user,
     targetId: request.userId,
   };
