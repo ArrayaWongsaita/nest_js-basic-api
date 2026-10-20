@@ -15,7 +15,7 @@ PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/nest_js_api
 
 JWT_ACCESS_SECRET=change-me-access-secret
-JWT_ACCESS_TTL=15m
+JWT_ACCESS_TTL=10m
 AUTH_REFRESH_COOKIE_NAME=refresh_token
 AUTH_REFRESH_TTL=30d
 

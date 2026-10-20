@@ -81,7 +81,23 @@ describe('loadAppConfig', () => {
     expect(config.auth.accessTokenTtlSeconds).toBe(300);
   });
 
-  it.each(['16m', '1h', '0s', 'abc'])(
+  it.each([
+    ['15m', 900],
+    ['16m', 960],
+    ['1h', 3600],
+    ['24h', 86400],
+    ['1d', 86400],
+    ['1440m', 86400],
+  ])(
+    'accepts JWT_ACCESS_TTL=%s up to the 24 hour cap',
+    (ttl, expectedSeconds) => {
+      const config = loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: ttl });
+
+      expect(config.auth.accessTokenTtlSeconds).toBe(expectedSeconds);
+    },
+  );
+
+  it.each(['25h', '2d', '1441m', '90001s', '0s', 'abc', '1.5h', '3600'])(
     'rejects JWT_ACCESS_TTL=%s at startup',
     (ttl) => {
       expect(() =>
@@ -89,6 +105,26 @@ describe('loadAppConfig', () => {
       ).toThrow('Invalid environment configuration');
     },
   );
+
+  it('rejects an access token lifetime longer than the refresh token lifetime', () => {
+    expect(() =>
+      loadAppConfig({
+        ...createBaseEnv(),
+        JWT_ACCESS_TTL: '24h',
+        AUTH_REFRESH_TTL: '1h',
+      }),
+    ).toThrow(
+      'Invalid environment configuration: JWT_ACCESS_TTL (24h) must not exceed AUTH_REFRESH_TTL (1h)',
+    );
+  });
+
+  it('reports the 24 hour ceiling when JWT_ACCESS_TTL is too long', () => {
+    expect(() =>
+      loadAppConfig({ ...createBaseEnv(), JWT_ACCESS_TTL: '25h' }),
+    ).toThrow(
+      'Invalid environment configuration: JWT_ACCESS_TTL must be between 1 second and 24 hours, received "25h"',
+    );
+  });
 
   it('throws a readable error when required env values are missing', () => {
     expect(() => loadAppConfig({})).toThrow(

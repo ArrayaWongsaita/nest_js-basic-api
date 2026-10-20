@@ -56,6 +56,10 @@ _Avoid_: Login
 A short-lived proof of identity sent with each request; once issued it stays valid until it expires.
 _Avoid_: JWT, bearer
 
+**Access token lifetime**:
+How long an issued access token stays valid; defaults to 10 minutes and may not exceed 24 hours.
+_Avoid_: Token expiry, session timeout
+
 **Refresh token**:
 A long-lived secret that can be exchanged for a new access token; it can be revoked, which ends the session.
 _Avoid_: Session token
@@ -63,6 +67,10 @@ _Avoid_: Session token
 **Session revocation**:
 Removing a user's refresh token so the session cannot be renewed; happens on deactivation, deletion, role change and password reset.
 _Avoid_: Kicking out, invalidation
+
+**Revocation latency**:
+The time a revoked user keeps working, which lasts until their current access token expires.
+_Avoid_: Revocation delay, propagation delay
 
 **Temporary password**:
 A one-time password generated when an administrator resets a user's password and shown to the administrator once.

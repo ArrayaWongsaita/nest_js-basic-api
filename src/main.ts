@@ -1,10 +1,23 @@
 import { createHttpApp } from './bootstrap/http/create-http-app';
-import { loadRuntimeAppConfig } from './bootstrap/config/app-config';
+import {
+  RECOMMENDED_ACCESS_TOKEN_TTL_SECONDS,
+  loadRuntimeAppConfig,
+} from './bootstrap/config/app-config';
 import { createBootstrapLogger } from './bootstrap/logging/bootstrap-logger';
 
 async function bootstrap() {
   const logger = createBootstrapLogger();
   const appConfig = loadRuntimeAppConfig();
+
+  if (
+    appConfig.environment === 'production' &&
+    appConfig.auth.accessTokenTtlSeconds > RECOMMENDED_ACCESS_TOKEN_TTL_SECONDS
+  ) {
+    logger.warn(
+      `Access token lifetime is ${appConfig.auth.accessTokenTtlSeconds}s in production; revocation latency matches it.`,
+    );
+  }
+
   const app = await createHttpApp(appConfig);
   const port = appConfig.http.port;
 
