@@ -72,7 +72,7 @@ There is no global route prefix. All paths below are relative to the server root
 
 Every route is protected by a global guard unless marked **Public** below.
 
-- Send `Authorization: Bearer <accessToken>`. The access token is a signed JWT verified without a database read. Its lifetime is `JWT_ACCESS_TTL` (default `10m`, maximum `15m`).
+- Send `Authorization: Bearer <accessToken>`. The access token is a signed JWT verified without a database read. Its lifetime is `JWT_ACCESS_TTL` (default `10m`, maximum `24h`).
 - The refresh token is an opaque value stored only in an `HttpOnly` cookie (name `AUTH_REFRESH_COOKIE_NAME`, default `refresh_token`, `Path=/`, `SameSite=None`, `Secure` in production, lifetime `AUTH_REFRESH_TTL`, default `30d`). It is never returned in JSON.
 - Missing or invalid Bearer token: `401 UNAUTHORIZED` ("Access token is required." or "Access token is invalid or expired.").
 - Missing a required permission: `403 FORBIDDEN` ("You do not have permission to access this resource."). All required permissions listed for a route must be present in the token.

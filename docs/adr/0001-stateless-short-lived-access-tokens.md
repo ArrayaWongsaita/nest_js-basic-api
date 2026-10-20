@@ -2,6 +2,8 @@
 
 Status: accepted
 
+The 15-minute lifetime cap described below is superseded by [ADR-0003](./0003-raise-access-token-ttl-cap-to-24-hours.md); the stateless-token decision itself still stands.
+
 The auth guard trusts a signed access token without consulting the database, and the token lifetime is short (default 10 minutes, configurable, capped at 15). When a user is deactivated, soft-deleted, has roles changed or has their password reset, the refresh token is revoked immediately, so the change takes full effect once the current access token expires.
 
 ## Considered Options

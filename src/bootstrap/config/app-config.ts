@@ -3,8 +3,11 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 
 const DEFAULT_HTTP_PORT = 3000;
-// Never raise above the previous default (15m); revocation latency equals this.
-const MAX_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+// Revocation latency equals the access token lifetime, so the lifetime stays
+// bounded (see ADR-0003). Anything above the recommendation is allowed but
+// logged as a warning in production.
+const MAX_ACCESS_TOKEN_TTL_SECONDS = 24 * 60 * 60;
+export const RECOMMENDED_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 
 const rawEnvSchema = z.object({
   NODE_ENV: z
@@ -114,6 +117,15 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
     );
   }
 
+  const accessTokenTtlSeconds = parseAccessTokenTtlSeconds(env.JWT_ACCESS_TTL);
+  const refreshTokenTtlSeconds = parseDurationToSeconds(env.AUTH_REFRESH_TTL);
+
+  if (accessTokenTtlSeconds > refreshTokenTtlSeconds) {
+    throw new Error(
+      `Invalid environment configuration: JWT_ACCESS_TTL (${env.JWT_ACCESS_TTL}) must not exceed AUTH_REFRESH_TTL (${env.AUTH_REFRESH_TTL})`,
+    );
+  }
+
   return {
     environment: env.NODE_ENV,
     http: {
@@ -128,9 +140,9 @@ function mapRawEnvToAppConfig(env: z.infer<typeof rawEnvSchema>): AppConfig {
     },
     auth: {
       accessTokenSecret: env.JWT_ACCESS_SECRET,
-      accessTokenTtlSeconds: parseAccessTokenTtlSeconds(env.JWT_ACCESS_TTL),
+      accessTokenTtlSeconds,
       refreshCookieName: env.AUTH_REFRESH_COOKIE_NAME.trim(),
-      refreshTokenTtlSeconds: parseDurationToSeconds(env.AUTH_REFRESH_TTL),
+      refreshTokenTtlSeconds,
       bootstrapAdmin:
         bootstrapAdminEmail && bootstrapAdminPassword
           ? {
@@ -242,7 +254,7 @@ function parseAccessTokenTtlSeconds(value: string): number {
 
   if (seconds < 1 || seconds > MAX_ACCESS_TOKEN_TTL_SECONDS) {
     throw new Error(
-      `Invalid environment configuration: JWT_ACCESS_TTL must be between 1 second and 15 minutes, received "${value}"`,
+      `Invalid environment configuration: JWT_ACCESS_TTL must be between 1 second and 24 hours, received "${value}"`,
     );
   }
 
